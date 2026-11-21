@@ -1,79 +1,101 @@
-// The screenshot scenes behind ?shot=start|play|end. Each one plays the real rules forward from a
-// fresh world for a fixed number of steps, steered by a simple autopilot (look ahead each way the
-// paddle could move, keep clear of blocks, chase the lowest coin when that is safe), so the frame
-// is what a short game really looks like and the same seed always gives the same frame.
-import { FIELD, PLAYER, STEP } from './config.js';
-import { EVENT_OVER, KIND_BLOCK } from './world.js';
-import { SCREEN_OVER, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
+// Deterministic staged scenes for the entry screenshots, in the spirit of the kit's original
+// shot helper: ?shot=<name>&seed=<n> builds a fixed tableau on a fresh world, and the normal
+// simulation keeps running afterwards so the scene stays alive (traffic flows, lightbars flash,
+// the water shimmers, the helicopter holds its light on Ray). Scenes: title (the title screen
+// over the marina), chase (a four-star pursuit with a roadblock ahead), mission (Marla's first
+// job offer, dialogue panel up), city (a wide dusk view over downtown and the bay).
 
-const START_SECONDS = 5;
-const PLAY_SECONDS = 26;
-const END_LIMIT_SECONDS = 600;
-/**
- * How far ahead, in seconds, the autopilot checks each way it could move: the play scene's pilot
- * looks well ahead and keeps all its lives; the end scene's looks only a moment ahead, so it is
- * caught out once the blocks speed up, as a hurried player is.
- */
-const HORIZON_PLAY = 0.7;
-const HORIZON_END = 0.25;
-const SAMPLE = 1 / 30;
-const DIRECTIONS = [0, -1, 1];
-/** Extra room, each side, it keeps between the paddle and a block. */
-const MARGIN = 10;
-
-/** Seconds until moving in `direction` (-1, 0, 1) runs the paddle into a block; Infinity when it never does. */
-function timeToHit(state, direction, horizon) {
-  const player = state.player;
-  for (let t = SAMPLE; t <= horizon; t += SAMPLE) {
-    const x = Math.min(FIELD.width - player.width, Math.max(0, player.x + direction * PLAYER.speed * t));
-    for (let index = 0; index < state.items.length; index += 1) {
-      const item = state.items[index];
-      if (!item.active || item.kind !== KIND_BLOCK) continue;
-      const y = item.y + item.speed * t;
-      if (y + item.height > player.y && y < player.y + player.height && item.x < x + player.width + MARGIN && item.x + item.width > x - MARGIN) return t;
-    }
-  }
-  return Infinity;
+export function parseShot() {
+  const params = new URLSearchParams(window.location.search);
+  const name = params.get('shot');
+  if (name === null) return null;
+  const seed = Number.parseInt(params.get('seed') ?? '1', 10);
+  return { name, seed: Number.isFinite(seed) && seed > 0 ? seed : 1 };
 }
 
-/** Of the safe ways to move, the one toward the lowest coin (or the centre); else the one that is hit last. */
-function autopilot(state, horizon) {
-  const player = state.player;
-  let coin = null;
-  for (let index = 0; index < state.items.length; index += 1) {
-    const item = state.items[index];
-    if (item.active && item.kind !== KIND_BLOCK && (coin === null || item.y > coin.y)) coin = item;
-  }
-  const target = coin === null ? FIELD.width / 2 : coin.x + coin.width / 2;
-  const centre = player.x + player.width / 2;
-  const wanted = target > centre + 8 ? 1 : target < centre - 8 ? -1 : 0;
-  let best = wanted;
-  let bestTime = timeToHit(state, wanted, horizon);
-  for (let index = 0; index < DIRECTIONS.length && bestTime !== Infinity; index += 1) {
-    const time = timeToHit(state, DIRECTIONS[index], horizon);
-    if (time > bestTime) {
-      bestTime = time;
-      best = DIRECTIONS[index];
-    }
-  }
-  return best;
+function stageTitle(state) {
+  state.clock = 18.65 * 60;
+  const p = state.player;
+  p.x = 4470;
+  p.y = 2350;
+  p.angle = -Math.PI / 2;
+  state.spawnCar('sports', 4380, 2560, -0.4, { kind: 'parked' });
+  state.spawnCar('sedan', 4360, 2140, 0.2, { kind: 'parked' });
 }
 
-/**
- * Set `world` to the named scene (start, play or end; any other name is start) and return the
- * screen to draw over it and the best score to show.
- */
-export function stageShot(name, world) {
-  world.reset();
-  if (name !== 'play' && name !== 'end') {
-    for (let index = 0; index < START_SECONDS / STEP; index += 1) world.step(STEP, 0, true);
-    return { screen: SCREEN_TITLE, best: 0 };
+function stageChase(state) {
+  state.clock = 19.35 * 60;
+  const p = state.player;
+  const car = state.spawnCar('sports', 980, 1100, 0, { kind: 'player' });
+  car.vx = 320;
+  p.car = car;
+  p.x = car.x;
+  p.y = car.y;
+  state.wanted.stars = 4;
+  state.wanted.heat = 210;
+  state.wanted.floor = 175;
+  const cop1 = state.spawnCar('police', 690, 1052, 0.1, { kind: 'police', driver: true });
+  cop1.vx = 300;
+  const cop2 = state.spawnCar('police', 620, 1152, -0.08, { kind: 'police', driver: true });
+  cop2.vx = 295;
+  // The roadblock waits at the next crossroads, parked across the lanes, officers out.
+  for (const [y, a] of [[1050, Math.PI / 2], [1150, -Math.PI / 2]]) {
+    const block = state.spawnCar('police', 2420, y, a, { kind: 'police', driver: false });
+    block.ai = { stuckT: 0, revT: 0, holdPosition: true };
   }
-  const limit = name === 'end' ? END_LIMIT_SECONDS : PLAY_SECONDS;
-  const horizon = name === 'end' ? HORIZON_END : HORIZON_PLAY;
-  for (let index = 0; index < limit / STEP; index += 1) {
-    if (world.step(STEP, autopilot(world.state, horizon), false) & EVENT_OVER) break;
+  for (const off of [-70, 70]) {
+    const cop = state.spawnPed(2420 + off, 1100 + (off < 0 ? -52 : 52), 'cop');
+    cop.state = 'attack';
   }
-  const over = world.state.lives === 0;
-  return { screen: over ? SCREEN_OVER : SCREEN_PLAY, best: world.state.score };
+  state.spawnCar('sedan', 1500, 1142, 0, { kind: 'traffic', driver: true });
+  state.heli = { x: car.x - 170, y: car.y - 200, angle: 0.7, rotor: 0 };
+  state.setBanner('VBPD PURSUIT', 'Four stars — the roadblock is waiting at Palm Cross');
+  state.banner.dur = 1e9;
+  state.objective = { x: 2440, y: 1100, label: 'Outrun the VBPD', route: null };
+}
+
+function stageMission(state) {
+  state.clock = 18.5 * 60;
+  const p = state.player;
+  // Ray stands at the Gilded Eel's door; the boot code "talks" on an early frame, which starts
+  // Marla's first job through the director's normal offer path, dialogue panel and all.
+  p.x = 712;
+  p.y = 1470;
+  p.angle = -Math.PI / 2;
+  state.spawnCar('sedan', 620, 1590, 0.12, { kind: 'parked' });
+  state.spawnCar('compact', 900, 1330, -0.1, { kind: 'parked' });
+  state.cameraOverride = { x: 730, y: 1430, zoom: 1.25 };
+}
+
+function stageCity(state) {
+  state.clock = 19.05 * 60;
+  const p = state.player;
+  // Ray stands on the coast road; ambient traffic and pedestrians spawn around him, in frame.
+  p.x = 4360;
+  p.y = 1900;
+  p.angle = -Math.PI / 2;
+  state.cameraOverride = { x: 3980, y: 1760, zoom: 0.5 };
+  const kinds = ['sedan', 'compact', 'taxi', 'sports', 'suv', 'van', 'sedan'];
+  for (let i = 0; i < kinds.length; i += 1) {
+    const east = i % 2 === 0;
+    const car = state.spawnCar(kinds[i], 2450 + i * 260, east ? 1142 : 1058, east ? 0 : Math.PI, { kind: 'traffic', driver: true });
+    car.ai = state.trafficInit(car);
+  }
+  // Coast-road traffic flowing past the marina, both ways.
+  for (let i = 0; i < 4; i += 1) {
+    const north = i % 2 === 0;
+    const car = state.spawnCar(['sports', 'sedan', 'taxi', 'suv'][i], north ? 4318 : 4402, 900 + i * 620, north ? -Math.PI / 2 : Math.PI / 2, { kind: 'traffic', driver: true });
+    car.ai = state.trafficInit(car);
+  }
+  state.spawnCar('sports', 4480, 2260, 0.3, { kind: 'parked' });
+  state.spawnCar('compact', 4490, 1420, -0.2, { kind: 'parked' });
+}
+
+export function stageShot(state, director, name) {
+  state.shotMode = true;
+  if (name === 'chase') stageChase(state);
+  else if (name === 'mission') stageMission(state);
+  else if (name === 'city') stageCity(state);
+  else stageTitle(state);
+  void director;
 }

@@ -1,24 +1,76 @@
-// A working gta6-01 entry (Node 22, standard library only): the game is this directory's
-// game/ folder, plain static files a desktop browser loads offline (game/index.html and its ES
-// modules, no library and no network request), and the program hands it in. It copies game/ and
-// screenshots/ from beside this file to /output and writes /output/dossier.json, the summary the
-// judge reads, with the vendored make.fun library. Only the plumbing, not an open world: Block
-// Dodger, a plain 2D canvas game where a paddle dodges falling blocks and catches coins, with a
-// title screen, score, lives and levels, game over and restart, flat colours and no sound. Build
-// your own open-world crime game in its place (three.js or any library you vendor under game/),
-// put your 3 or 4 PNG or JPEG screenshots in screenshots/ (the first by name is the cover) and run it.
+// Velora Bay's gta6-01 entry (Node 22, standard library only). The game is this directory's
+// game/ folder — plain static files a desktop browser loads fully offline (game/index.html and
+// its ES modules; every picture is drawn on a canvas and every sound is synthesized with
+// WebAudio, so there is nothing to fetch). This program hands the entry in: it first walks
+// game/ and screenshots/ and verifies the entry is whole (the page, its module graph, four
+// screenshots inside the scorer's size cap), then copies both folders to /output and writes
+// /output/dossier.json, the summary the judge reads, with the vendored make.fun library.
 //
 // Serve it locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
-import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildDossier } from './vendor/makefun-game.ts';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+
+/** The game's module graph, in load order — every file the page needs to boot offline. */
+const GAME_MODULES = [
+  'index.html',
+  'src/config.js',
+  'src/random.js',
+  'src/city.js',
+  'src/world.js',
+  'src/missions.js',
+  'src/audio.js',
+  'src/input.js',
+  'src/render.js',
+  'src/shots.js',
+  'src/main.js',
+];
+
+/** The four screenshots, cover first, matching shots.json. */
+const SCREENSHOTS = ['1-title.jpg', '2-chase.jpg', '3-mission.jpg', '4-city.jpg'];
+
+/** The scorer refuses any single screenshot over 256 KiB; the entry checks itself first. */
+const SCREENSHOT_MAX_BYTES = 262144;
+
+function listFiles(root, prefix = '') {
+  const found = [];
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const rel = prefix === '' ? entry.name : `${prefix}/${entry.name}`;
+    if (entry.isDirectory()) found.push(...listFiles(join(root, entry.name), rel));
+    else found.push(rel);
+  }
+  return found;
+}
+
+/**
+ * Verify the entry before handing it in: every module present and non-empty, every screenshot
+ * present and inside the cap. Returns a one-line inventory for the run log.
+ */
+function verifyEntry(gameDir, shotsDir) {
+  const problems = [];
+  for (const rel of GAME_MODULES) {
+    const file = join(gameDir, rel);
+    if (!existsSync(file) || statSync(file).size === 0) problems.push(`missing game/${rel}`);
+  }
+  for (const name of SCREENSHOTS) {
+    const file = join(shotsDir, name);
+    if (!existsSync(file)) problems.push(`missing screenshots/${name}`);
+    else if (statSync(file).size > SCREENSHOT_MAX_BYTES) problems.push(`screenshots/${name} exceeds 256 KiB`);
+  }
+  if (problems.length > 0) throw new Error(`Velora Bay entry is incomplete: ${problems.join('; ')}`);
+  const files = listFiles(gameDir);
+  const bytes = files.reduce((sum, rel) => sum + statSync(join(gameDir, rel)).size, 0);
+  return `${files.length} game files, ${(bytes / 1024).toFixed(1)} KiB, ${SCREENSHOTS.length} screenshots verified`;
+}
+
+console.log(`Velora Bay: ${verifyEntry(join(here, 'game'), join(here, 'screenshots'))}`);
 
 mkdirSync(out, { recursive: true });
 cpSync(join(here, 'game'), join(out, 'game'), { recursive: true });

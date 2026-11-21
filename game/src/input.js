@@ -1,53 +1,72 @@
-// Keyboard and pointer input. Held keys give a steering direction; one-shot presses (start or
-// restart, pause) are queued as bit flags and taken once by the loop, so a press between two
-// frames is never lost and never counted twice.
+// Keyboard and mouse input for Velora Bay. Held keys live in a Set the world reads every step;
+// one-shot presses are queued so a tap between two frames is never lost; the mouse position and
+// its buttons are tracked in window pixels and the renderer turns them into world coordinates.
 
-export const ACTION_CONFIRM = 1;
-export const ACTION_PAUSE = 2;
-
-const LEFT = new Set(['ArrowLeft', 'KeyA']);
-const RIGHT = new Set(['ArrowRight', 'KeyD']);
-const CONFIRM = new Set(['Space', 'Enter']);
-const PAUSE = new Set(['KeyP', 'Escape']);
-
-export function createInput(target) {
-  let left = false;
-  let right = false;
-  let actions = 0;
+export function createInput(canvas) {
+  const held = new Set();
+  const pressedQueue = new Set();
+  const mouse = { x: 0, y: 0, down: false, pressed: false, rightDown: false };
 
   window.addEventListener('keydown', (event) => {
-    if (LEFT.has(event.code)) left = true;
-    else if (RIGHT.has(event.code)) right = true;
-    else if (CONFIRM.has(event.code)) {
-      if (!event.repeat) actions |= ACTION_CONFIRM;
-    } else if (PAUSE.has(event.code)) {
-      if (!event.repeat) actions |= ACTION_PAUSE;
-    } else return;
-    event.preventDefault();
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(event.code)) event.preventDefault();
+    if (!event.repeat) pressedQueue.add(event.code);
+    held.add(event.code);
   });
   window.addEventListener('keyup', (event) => {
-    if (LEFT.has(event.code)) left = false;
-    else if (RIGHT.has(event.code)) right = false;
+    held.delete(event.code);
   });
-  // A key released while the tab is hidden never sends keyup: let go of everything on blur.
   window.addEventListener('blur', () => {
-    left = false;
-    right = false;
+    held.clear();
+    mouse.down = false;
+    mouse.rightDown = false;
   });
-  target.addEventListener('pointerdown', () => {
-    actions |= ACTION_CONFIRM;
+  canvas.addEventListener('pointermove', (event) => {
+    mouse.x = event.clientX;
+    mouse.y = event.clientY;
   });
+  canvas.addEventListener('pointerdown', (event) => {
+    mouse.x = event.clientX;
+    mouse.y = event.clientY;
+    if (event.button === 0) {
+      mouse.down = true;
+      mouse.pressed = true;
+    }
+    if (event.button === 2) mouse.rightDown = true;
+  });
+  window.addEventListener('pointerup', (event) => {
+    if (event.button === 0) mouse.down = false;
+    if (event.button === 2) mouse.rightDown = false;
+  });
+  canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
   return {
-    /** -1 for left, 1 for right, 0 for neither or both. */
-    direction() {
-      return (right ? 1 : 0) - (left ? 1 : 0);
+    mouse,
+    down(code) {
+      return held.has(code);
     },
-    /** The one-shot presses since the last call, as ACTION_* flags. */
-    takeActions() {
-      const taken = actions;
-      actions = 0;
-      return taken;
+    /** True once per physical press; calling this consumes the press. */
+    pressed(code) {
+      if (!pressedQueue.has(code)) return false;
+      pressedQueue.delete(code);
+      return true;
+    },
+    /** Consume a mouse click (left button press edge). */
+    takeClick() {
+      const was = mouse.pressed;
+      mouse.pressed = false;
+      return was;
+    },
+    /** Drop every queued press: called when a menu, dialogue or shop opens, so a key tapped
+     *  during play (a stride on WASD, a stray Enter) does not leak into the new screen. */
+    flush() {
+      pressedQueue.clear();
+      mouse.pressed = false;
+    },
+    /** Movement axes from WASD / arrows: x right, y down, each -1..1. */
+    moveAxes() {
+      const x = (held.has('KeyD') || held.has('ArrowRight') ? 1 : 0) - (held.has('KeyA') || held.has('ArrowLeft') ? 1 : 0);
+      const y = (held.has('KeyS') || held.has('ArrowDown') ? 1 : 0) - (held.has('KeyW') || held.has('ArrowUp') ? 1 : 0);
+      return { x, y };
     },
   };
 }
