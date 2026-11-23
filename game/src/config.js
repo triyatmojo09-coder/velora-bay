@@ -1,6 +1,19 @@
-// VELORA BAY 3D — shared constants: city grid, sunset palette, tuning.
+// VELORA BAY — shared constants: city grid, golden-hour pastel palette, tuning, toon shading.
 // The city is a regular grid: 14 m streets on a 54 m pitch, 40 m blocks between them.
 // Street centrelines sit at multiples of 54 offset by -162, block centres between them.
+import * as THREE from 'three';
+let _grad = null;
+export function toonGradient() {
+  if (_grad) return _grad;
+  const data = new Uint8Array([90, 150, 210, 255]);
+  _grad = new THREE.DataTexture(data, 4, 1, THREE.RedFormat);
+  _grad.minFilter = _grad.magFilter = THREE.NearestFilter;
+  _grad.needsUpdate = true;
+  return _grad;
+}
+export function toonMat(color, opts = {}) {
+  return new THREE.MeshToonMaterial({ color, gradientMap: toonGradient(), ...opts });
+}
 
 export const CONFIG = {
   WORLD_HALF: 180,          // playable half-extent (m)
@@ -23,21 +36,38 @@ export const CONFIG = {
 };
 
 export const PALETTE = {
-  sky: 0x35224d,
-  fog: 0x2a1e3f,
-  sun: 0xff9a3c,
-  hemiSky: 0xff8fb2,
-  hemiGround: 0x3a2b5c,
-  ground: 0x4a3b52,
-  sand: 0xd9a066,
-  asphalt: 0x2e2a3a,
-  sidewalk: 0x8d8296,
-  water: 0x1b7f8e,
+  sky: 0xffc9a3,
+  fog: 0xffd9b3,
+  sun: 0xffe0b0,
+  hemiSky: 0xbfe3ff,
+  hemiGround: 0xffd9b3,
+  ground: 0x9db38a,
+  sand: 0xffe3a8,
+  asphalt: 0x8a8296,
+  sidewalk: 0xf2dcc3,
+  water: 0x35c4c9,
   gold: 0xffc94d,
   pink: 0xff5d8f,
   teal: 0x2ec4b6,
-  buildingPastels: [0xf2b8c6, 0xf7d08a, 0xa8d8c8, 0xb8c6f2, 0xf2a65a, 0xd8b8f2, 0xf7ede2, 0x9fd8e8, 0xf2c6a0, 0xc8e6a0],
+  buildingPastels: [0xffc7d6, 0xffe3a3, 0xb5e8d5, 0xc3d4ff, 0xffc48f, 0xaeeadd, 0xfff3e0, 0xbde8ff, 0xffd9b8, 0xd8f2b0],
 };
+
+// Miami layout: two water channels cut into the land from the eastern ocean,
+// leaving a downtown peninsula between them. Vertical streets cross each
+// channel on bridges (bridgeXs); everything else in the rect is open water.
+export const CHANNELS = [
+  { minX: -20, maxX: 195, minZ: 68, maxZ: 94, bridges: [54, 108, 162] },
+  { minX: 40, maxX: 195, minZ: -94, maxZ: -68, bridges: [54, 108, 162] },
+];
+export function inChannel(x, z) {
+  for (const c of CHANNELS) {
+    if (x > c.minX && x < c.maxX && z > c.minZ && z < c.maxZ) {
+      if (c.bridges.some((b) => Math.abs(x - b) < 8)) return false;
+      return c;
+    }
+  }
+  return null;
+}
 
 // Deterministic RNG (mulberry32) so staged shots and city layout are reproducible.
 export function makeRng(seed = 1) {
@@ -82,6 +112,17 @@ export function collideCircle(pos, r, colliders) {
         else pos.z = b.maxZ + r;
       }
     }
+  }
+  // keep everything out of the inlet/bay water (bridges are dry)
+  const ch = inChannel(pos.x, pos.z);
+  if (ch) {
+    hit = true;
+    const pl = pos.x - ch.minX, pr = ch.maxX - pos.x, pt = pos.z - ch.minZ, pb = ch.maxZ - pos.z;
+    const m = Math.min(pl, pr, pt, pb);
+    if (m === pt) pos.z = ch.minZ - r;
+    else if (m === pb) pos.z = ch.maxZ + r;
+    else if (m === pl) pos.x = ch.minX - r;
+    else pos.x = ch.maxX + r;
   }
   const lim = CONFIG.WORLD_HALF + 60;
   if (pos.x > CONFIG.WATER_X + 4) pos.x = CONFIG.WATER_X + 4;

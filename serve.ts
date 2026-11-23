@@ -1,7 +1,7 @@
 // A tiny static server for game/ (Node 22, standard library only), so an entry can be played
 // locally without a build step: `node serve.ts` serves game/ on http://localhost:8080.
-// It sends the MIME types a browser game needs — including font/woff2 for the bundled Anton
-// and Rajdhani faces, without which local play-testing would silently fall back to system
+// It sends the MIME types a browser game needs — including font/woff2 for the bundled Cinzel
+// and M PLUS Rounded 1c faces, without which local play-testing would silently fall back to system
 // fonts — refuses any path outside game/, and otherwise does nothing clever: this is a
 // development convenience, not a web server for the internet.
 import { createReadStream, statSync } from 'node:fs';

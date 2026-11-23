@@ -1,14 +1,14 @@
 // VELORA BAY 3D — cars: mesh builder, arcade car physics, traffic AI and police pursuit AI.
 import * as THREE from 'three';
-import { CONFIG, clamp, angleDiff, collideCircle } from './config.js';
+import { CONFIG, clamp, angleDiff, collideCircle, toonMat, inChannel } from './config.js';
 
 const CAR_COLORS = [0xe84a6f, 0x3fa7d6, 0xf2b138, 0x7bc950, 0xb388eb, 0xf2f2f2, 0x2ec4b6, 0xe86a3c, 0x8d99ae];
 
 export function buildCar(color, { police = false, taxi = false } = {}) {
   const g = new THREE.Group();
-  const paint = new THREE.MeshPhongMaterial({ color, shininess: 60, specular: 0x888888 });
-  const dark = new THREE.MeshLambertMaterial({ color: 0x1c1c26 });
-  const glass = new THREE.MeshPhongMaterial({ color: 0x18222e, shininess: 90, specular: 0xaaccdd });
+  const paint = toonMat(color);
+  const dark = toonMat(0x2b2b3a);
+  const glass = toonMat(0x9fd8e8);
 
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 4.3), paint);
   body.position.y = 0.55; g.add(body);
@@ -17,7 +17,7 @@ export function buildCar(color, { police = false, taxi = false } = {}) {
   const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.66, 0.52, 2.1), glass);
   cabin.position.set(0, 1.05, -0.25); g.add(cabin);
   if (police) {
-    const band = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.3, 2.0), new THREE.MeshLambertMaterial({ color: 0xf4f4f4 }));
+    const band = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.3, 2.0), toonMat(0xf4f4f4));
     band.position.set(0, 0.58, -0.2); g.add(band);
   }
   if (taxi) {
@@ -57,10 +57,14 @@ export function buildCar(color, { police = false, taxi = false } = {}) {
   }
   const shadow = new THREE.Mesh(
     new THREE.CircleGeometry(2.5, 18),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3, depthWrite: false }),
+    new THREE.MeshBasicMaterial({ color: 0x402030, transparent: true, opacity: 0.22, depthWrite: false }),
   );
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.04; shadow.scale.set(0.85, 1.7, 1);
   g.add(shadow);
+  // rounded roofline hint + cast shadows for a softer anime silhouette
+  const roofRound = new THREE.Mesh(new THREE.SphereGeometry(0.9, 12, 8), paint);
+  roofRound.scale.set(0.95, 0.28, 1.15); roofRound.position.set(0, 1.28, -0.25); g.add(roofRound);
+  g.traverse((o) => { if (o.isMesh && o !== shadow) o.castShadow = true; });
   return { group: g, wheels, lbRed, lbBlue };
 }
 
@@ -192,6 +196,7 @@ export function parkedCars(rng) {
     const side = rng() < 0.5 ? -5.4 : 5.4;
     const x = vertical ? c + side : along;
     const z = vertical ? along : c + side;
+    if (inChannel(x, z)) continue;
     const heading = vertical ? (side > 0 ? Math.PI : 0) : (side > 0 ? -Math.PI / 2 : Math.PI / 2);
     const color = CAR_COLORS[Math.floor(rng() * CAR_COLORS.length)];
     const sim = new CarSim(x, z, heading, color, { taxi: rng() < 0.15 });

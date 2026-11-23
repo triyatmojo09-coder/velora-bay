@@ -3,7 +3,7 @@
 // third-person open-world rebuild on Three.js (vendored under game/vendor/, excluded from
 // the dossier's source text by the library's own classification), ES modules under
 // game/src/, and every sound synthesized with WebAudio. The only binary assets besides the
-// vendored library are the bundled Anton / Rajdhani woff2 faces under game/fonts/, verified
+// vendored library are the bundled Cinzel / M PLUS Rounded 1c woff2 faces under game/fonts/, verified
 // below like the modules, so the page never fetches a font or a script at runtime.
 // This program hands the entry in: it first walks game/ and screenshots/ and verifies the
 // entry is whole (the page, its module graph, its fonts, four screenshots inside the scorer's
@@ -28,6 +28,7 @@ const GAME_MODULES = [
   'src/config.js',
   'src/city.js',
   'src/character.js',
+  'src/characters.js',
   'src/vehicles.js',
   'src/missions.js',
   'src/hud.js',
@@ -41,12 +42,27 @@ const GAME_MODULES = [
 const GAME_VENDORED = ['vendor/three.module.min.js'];
 const VENDORED_MIN_BYTES = 500000;
 
+/** Vendored three/addons modules for bloom post-processing — required, non-empty. */
+const GAME_ADDONS = [
+  'vendor/addons/postprocessing/EffectComposer.js',
+  'vendor/addons/postprocessing/RenderPass.js',
+  'vendor/addons/postprocessing/ShaderPass.js',
+  'vendor/addons/postprocessing/MaskPass.js',
+  'vendor/addons/postprocessing/UnrealBloomPass.js',
+  'vendor/addons/postprocessing/OutputPass.js',
+  'vendor/addons/postprocessing/Pass.js',
+  'vendor/addons/shaders/CopyShader.js',
+  'vendor/addons/shaders/LuminosityHighPassShader.js',
+  'vendor/addons/shaders/OutputShader.js',
+];
+
 /** Bundled typefaces the page loads from game/fonts/ — required, like any module. */
 const GAME_FONTS = [
-  'fonts/anton-latin.woff2',
-  'fonts/rajdhani-500-latin.woff2',
-  'fonts/rajdhani-600-latin.woff2',
-  'fonts/rajdhani-700-latin.woff2',
+  'fonts/cinzel-700.woff2',
+  'fonts/cinzel-900.woff2',
+  'fonts/mplus-500.woff2',
+  'fonts/mplus-700.woff2',
+  'fonts/mplus-800.woff2',
 ];
 
 /** The four screenshots, cover first, matching shots.json. */
@@ -71,7 +87,7 @@ function listFiles(root, prefix = '') {
  */
 function verifyEntry(gameDir, shotsDir) {
   const problems = [];
-  for (const rel of [...GAME_MODULES, ...GAME_FONTS]) {
+  for (const rel of [...GAME_MODULES, ...GAME_FONTS, ...GAME_ADDONS]) {
     const file = join(gameDir, rel);
     if (!existsSync(file) || statSync(file).size === 0) problems.push(`missing game/${rel}`);
   }

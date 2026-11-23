@@ -17,10 +17,11 @@ export function stageShot(name, ctx) {
   };
 
   if (name === 'title') {
-    // High at the marina, looking west across downtown at sunset. Menu overlay is DOM.
+    // Across the bay from the south-east: peninsula glass skyline over the inlet
+    // water with reflection streaks, downtown behind. Menu overlay is DOM.
     place(player, 120, 40, -1.2);
     player.group.position.set(120, 0, 40); player.group.rotation.y = -1.2;
-    lookCam(196, 26, 96, -40, 6, -30);
+    lookCam(228, 17, 148, 40, 16, -20);
     state.setObjective('');
     return;
   }
@@ -54,11 +55,12 @@ export function stageShot(name, ctx) {
     return;
   }
   if (name === 'vista') {
-    // At the water's edge looking west over the city, player small in the foreground.
+    // Low over the ocean east of the peninsula: skyline across the water with
+    // reflection streaks, player small on the beach in the foreground.
     place(player, 171, 17, -1.35);
     player.group.position.set(171, 0, 17); player.group.rotation.y = -1.35;
     state.setObjective('Velora Bay — every tide brings trouble.');
-    lookCam(191, 4.6, 31, 55, 9, -8);
+    lookCam(216, 6.5, 44, 60, 15, -6);
     return;
   }
 }
