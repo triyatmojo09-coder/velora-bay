@@ -15,6 +15,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 const params = new URLSearchParams(location.search);
 const SHOT = params.get('shot');
@@ -42,6 +43,36 @@ const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.35, 0.55, 0.85);
 composer.addPass(bloom);
+// vivid colour grade: gentle contrast lift + saturation boost before output
+const gradePass = new ShaderPass({
+  uniforms: {
+    tDiffuse: { value: null },
+    saturation: { value: 1.22 },
+    contrast: { value: 1.06 },
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */`
+    uniform sampler2D tDiffuse;
+    uniform float saturation;
+    uniform float contrast;
+    varying vec2 vUv;
+    void main() {
+      vec4 texel = texture2D(tDiffuse, vUv);
+      vec3 color = texel.rgb;
+      color = (color - 0.5) * contrast + 0.5;
+      float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+      color = mix(vec3(luminance), color, saturation);
+      gl_FragColor = vec4(color, texel.a);
+    }
+  `,
+});
+composer.addPass(gradePass);
 composer.addPass(new OutputPass());
 function renderFrame() { composer.render(); }
 addEventListener('resize', () => {

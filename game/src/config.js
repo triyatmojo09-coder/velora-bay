@@ -1,4 +1,4 @@
-// VELORA BAY — shared constants: city grid, golden-hour pastel palette, tuning, toon shading.
+// VELORA BAY — shared constants: city grid, golden-hour vivid-grade pastel palette, tuning, toon shading.
 // The city is a regular grid: 14 m streets on a 54 m pitch, 40 m blocks between them.
 // Street centrelines sit at multiples of 54 offset by -162, block centres between them.
 import * as THREE from 'three';
@@ -36,20 +36,20 @@ export const CONFIG = {
 };
 
 export const PALETTE = {
-  sky: 0xffc9a3,
-  fog: 0xffd9b3,
-  sun: 0xffe0b0,
+  sky: 0xffb877,
+  fog: 0xffc490,
+  sun: 0xffd28a,
   hemiSky: 0xbfe3ff,
-  hemiGround: 0xffd9b3,
-  ground: 0x9db38a,
-  sand: 0xffe3a8,
-  asphalt: 0x8a8296,
-  sidewalk: 0xf2dcc3,
-  water: 0x35c4c9,
+  hemiGround: 0xffc490,
+  ground: 0x86b06c,
+  sand: 0xffd98a,
+  asphalt: 0x776f8c,
+  sidewalk: 0xf5cf9f,
+  water: 0x0fb2cc,
   gold: 0xffc94d,
   pink: 0xff5d8f,
   teal: 0x2ec4b6,
-  buildingPastels: [0xffc7d6, 0xffe3a3, 0xb5e8d5, 0xc3d4ff, 0xffc48f, 0xaeeadd, 0xfff3e0, 0xbde8ff, 0xffd9b8, 0xd8f2b0],
+  buildingPastels: [0xff9ebb, 0xffcf4d, 0x63e0bb, 0x8fb4ff, 0xff9a62, 0x6fe3d0, 0xffe3b3, 0x7fd4ff, 0xffbe86, 0xb8ec6a],
 };
 
 // Miami layout: two water channels cut into the land from the eastern ocean,

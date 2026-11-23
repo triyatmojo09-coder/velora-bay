@@ -9,9 +9,9 @@ function facadeTextures() {
   // Large windows (4x8 grid) and varied lit ratios so buildings do not read
   // as a dense checkerboard.
   const W = 128, H = 256, cols = 3, rows = 5;
-  const wallBases = ['#fff6ea', '#ffefe0', '#f2fbf5', '#fff8ec'];
+  const wallBases = ['#ffeeda', '#ffe6cf', '#e2f7e9', '#ffefd4'];
   const litRatios = [0.10, 0.16, 0.24, 0.32];
-  const unlitCols = ['#a8c8d8', '#9fb8cc', '#b8c4d8', '#a8c8d8'];
+  const unlitCols = ['#6fa8c4', '#5f96bd', '#7fa6c9', '#6fa8c4'];
   const litCols = ['#ffe9a8', '#ffd98a', '#fff3c4'];
   const mk = (c) => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; };
   const variants = [];
@@ -73,11 +73,11 @@ export function buildCity(scene, rng) {
 
   // --- sky, fog, lights -------------------------------------------------
   scene.background = new THREE.Color(PALETTE.sky);
-  scene.fog = new THREE.Fog(PALETTE.fog, 150, 560);
+  scene.fog = new THREE.Fog(PALETTE.fog, 420, 1150);
   const gradC = document.createElement('canvas'); gradC.width = 4; gradC.height = 256;
   const gx = gradC.getContext('2d');
   const grad = gx.createLinearGradient(0, 0, 0, 256);
-  grad.addColorStop(0, '#2f9be8'); grad.addColorStop(0.34, '#79c4ec'); grad.addColorStop(0.58, '#f2c4d4'); grad.addColorStop(0.8, '#ffd9a8'); grad.addColorStop(1, '#fff0c8');
+  grad.addColorStop(0, '#1e7cd9'); grad.addColorStop(0.34, '#4fb0ee'); grad.addColorStop(0.58, '#f7a8c4'); grad.addColorStop(0.8, '#ffc98a'); grad.addColorStop(1, '#ffe9b0');
   gx.fillStyle = grad; gx.fillRect(0, 0, 4, 256);
   const gradTex = new THREE.CanvasTexture(gradC); gradTex.colorSpace = THREE.SRGBColorSpace;
   const skyDome = new THREE.Mesh(
@@ -93,7 +93,7 @@ export function buildCity(scene, rng) {
   group.add(sunSprite);
 
   scene.add(new THREE.HemisphereLight(PALETTE.hemiSky, PALETTE.hemiGround, 1.6));
-  const sun = new THREE.DirectionalLight(PALETTE.sun, 2.2);
+  const sun = new THREE.DirectionalLight(PALETTE.sun, 2.4);
   sun.position.set(120, 140, -80);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
@@ -143,7 +143,7 @@ export function buildCity(scene, rng) {
   const walkMat = new THREE.MeshLambertMaterial({ color: PALETTE.sidewalk });
   const walkGeo = new THREE.BoxGeometry(CONFIG.BLOCK + 4, 0.22, CONFIG.BLOCK + 4);
   const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-  const roofMat = new THREE.MeshLambertMaterial({ color: 0x8a7468 });
+  const roofMat = new THREE.MeshLambertMaterial({ color: 0x7d5f4d });
   let neonIdx = 0;
   const neonSigns = [];
   for (const bx of CONFIG.BLOCK_CENTERS) {
@@ -162,7 +162,7 @@ export function buildCity(scene, rng) {
         const peninsula = bx >= 81 && Math.abs(bz) <= 27; // tallest glass cluster, between the channels
         const residential = bx <= -81; // greener, lower west edge
         const h = peninsula ? 36 + rng() * 26 : downtown ? 22 + rng() * 23 : residential ? 6 + rng() * 8 : 8 + rng() * 20;
-        const glassTints = [0x9fd8e8, 0x7ec8e8, 0xbde8ff, 0xe8f4ff, 0xa8e6e0];
+        const glassTints = [0x6fcbe8, 0x3fb6e8, 0x8fd8ff, 0xcfeaff, 0x5fe0d0];
         const tint = peninsula
           ? glassTints[Math.floor(rng() * glassTints.length)]
           : PALETTE.buildingPastels[Math.floor(rng() * PALETTE.buildingPastels.length)];
@@ -330,7 +330,7 @@ export function buildCity(scene, rng) {
   sand.rotation.x = -Math.PI / 2; sand.position.set(168, 0.03, 0); group.add(sand);
 
   const waterMat = new THREE.MeshPhongMaterial({
-    color: PALETTE.water, transparent: true, opacity: 0.86, shininess: 160, specular: 0xfff0c8,
+    color: PALETTE.water, transparent: true, opacity: 0.92, shininess: 160, specular: 0xfff0c8,
   });
   const water = new THREE.Mesh(new THREE.PlaneGeometry(320, 420), waterMat);
   water.rotation.x = -Math.PI / 2; water.position.set(CONFIG.WATER_X + 158, 0.12, 0);
@@ -346,7 +346,7 @@ export function buildCity(scene, rng) {
   }
   // --- beachfront hotels: white/cream mid-rises along the ocean strip --------
   {
-    const hotelTints = [0xffffff, 0xfff3e0, 0xffe9ec, 0xe8f4ff, 0xfff8d6];
+    const hotelTints = [0xfff6e8, 0xffe9c4, 0xffd3dc, 0xcfe6ff, 0xfff0a8];
     for (const bz of CONFIG.BLOCK_CENTERS) {
       if (bz === 81 || bz === -81) continue; // channel rows
       const peninsulaRow = Math.abs(bz) <= 27;
@@ -395,7 +395,7 @@ export function buildCity(scene, rng) {
         st.rotation.x = -Math.PI / 2;
         st.position.set(ch.minX + 8 + rng() * (len - 16), 0.17, ch.minZ + 3 + rng() * (wid - 6));
         st.scale.set(10 + rng() * 18, 0.9 + rng() * 1.1, 1);
-        group.add(st); streaks.push({ m: st.material, base: 0.16 + rng() * 0.2, ph: rng() * 6 });
+        group.add(st); streaks.push({ m: st.material, base: 0.24 + rng() * 0.22, ph: rng() * 6 });
       }
     }
     // ocean streaks: skyline reflections east of the peninsula + sun glint path
@@ -407,7 +407,7 @@ export function buildCity(scene, rng) {
       st.position.set(glint ? 190 + rng() * 90 : 184 + rng() * 42, 0.17, glint ? -20 - rng() * 90 : -70 + rng() * 150);
       st.scale.set(1 + rng() * 1.4, 7 + rng() * 11, 1);
       if (glint) st.rotation.z = 0.45;
-      group.add(st); streaks.push({ m: st.material, base: 0.18 + rng() * 0.22, ph: rng() * 6 });
+      group.add(st); streaks.push({ m: st.material, base: 0.26 + rng() * 0.24, ph: rng() * 6 });
     }
   }
 
@@ -417,7 +417,7 @@ export function buildCity(scene, rng) {
   function update(dt) {
     t += dt;
     water.position.y = 0.12 + Math.sin(t * 0.7) * 0.05;
-    waterMat.opacity = 0.82 + Math.sin(t * 0.45) * 0.05;
+    waterMat.opacity = 0.9 + Math.sin(t * 0.45) * 0.04;
     waterMat.specular.setHSL(0.09, 0.7, 0.55 + Math.sin(t * 1.3) * 0.18); // animated shimmer
     for (const cl of clouds) { cl.position.x += dt * 1.1; if (cl.position.x > 300) cl.position.x = -300; }
     for (let i = 0; i < streaks.length; i++) streaks[i].m.opacity = streaks[i].base * (0.72 + 0.28 * Math.sin(t * 1.4 + streaks[i].ph));
