@@ -4,37 +4,101 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Velora Bay — Every Tide Brings Trouble</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23241b4d'/%3E%3Ctext x='8' y='12' font-size='11' text-anchor='middle' fill='%23ffd166'%3EV%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23241b4d'/%3E%3Ctext x='8' y='12' font-size='11' text-anchor='middle' fill='%23ffd166'%3E%3C/text%3E%3C/svg%3E">
 <style>
-  @font-face {
-    font-family: "Anton";
-    src: url("./fonts/anton-latin.woff2") format("woff2");
-    font-weight: 400; font-style: normal; font-display: swap;
-  }
-  @font-face {
-    font-family: "Rajdhani";
-    src: url("./fonts/rajdhani-500-latin.woff2") format("woff2");
-    font-weight: 500; font-style: normal; font-display: swap;
-  }
-  @font-face {
-    font-family: "Rajdhani";
-    src: url("./fonts/rajdhani-600-latin.woff2") format("woff2");
-    font-weight: 600; font-style: normal; font-display: swap;
-  }
-  @font-face {
-    font-family: "Rajdhani";
-    src: url("./fonts/rajdhani-700-latin.woff2") format("woff2");
-    font-weight: 700; font-style: normal; font-display: swap;
-  }
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #241b4d; font-family: "Rajdhani", sans-serif; }
-  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
-  /* Read aloud, never shown: the status line screen readers announce. */
-  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  @font-face { font-family: "Anton"; src: url("./fonts/anton-latin.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+  @font-face { font-family: "Rajdhani"; src: url("./fonts/rajdhani-500-latin.woff2") format("woff2"); font-weight: 500; font-style: normal; font-display: swap; }
+  @font-face { font-family: "Rajdhani"; src: url("./fonts/rajdhani-600-latin.woff2") format("woff2"); font-weight: 600; font-style: normal; font-display: swap; }
+  @font-face { font-family: "Rajdhani"; src: url("./fonts/rajdhani-700-latin.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #241b4d; font-family: "Rajdhani", sans-serif; color: #f5eefc; }
+  #app { position: fixed; inset: 0; }
+  #app canvas.webgl { position: absolute; inset: 0; display: block; }
+  .hud { position: absolute; pointer-events: none; z-index: 5; }
+  #hud-topleft { top: 16px; left: 16px; background: rgba(20,12,38,0.72); border: 1px solid rgba(255,201,77,0.55); border-radius: 10px; padding: 10px 14px; min-width: 190px; backdrop-filter: blur(3px); }
+  #money { font-family: "Anton", sans-serif; font-size: 30px; color: #7dff8a; letter-spacing: 1px; line-height: 1; }
+  #rank { font-size: 14px; font-weight: 700; color: #ffc94d; text-transform: uppercase; letter-spacing: 2px; margin-top: 4px; }
+  #respectbar { height: 7px; background: rgba(255,255,255,0.16); border-radius: 4px; margin-top: 6px; overflow: hidden; }
+  #respect { height: 100%; width: 0%; background: linear-gradient(90deg, #ff5d8f, #ffc94d); }
+  #hud-topright { top: 16px; right: 16px; text-align: right; background: rgba(20,12,38,0.72); border: 1px solid rgba(255,201,77,0.55); border-radius: 10px; padding: 10px 14px; }
+  #stars { font-size: 26px; line-height: 1; letter-spacing: 3px; }
+  #stars .star { color: rgba(255,255,255,0.22); }
+  #stars .star.on { color: #ffc94d; text-shadow: 0 0 9px rgba(255,201,77,0.9); }
+  #clock { font-family: "Anton", sans-serif; font-size: 20px; color: #ffd98a; margin-top: 4px; }
+  #timer { display: none; font-weight: 700; color: #ff8a7a; font-size: 17px; }
+  #minimap-wrap { position: absolute; left: 16px; bottom: 16px; z-index: 5; border: 2px solid rgba(255,201,77,0.55); border-radius: 10px; overflow: hidden; background: #241a38; }
+  #minimap { display: block; }
+  #objective-wrap { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 5; max-width: 620px; width: max-content; max-width: min(620px, 92vw); text-align: center; background: rgba(20,12,38,0.78); border: 1px solid rgba(46,196,182,0.6); border-radius: 10px; padding: 8px 18px; pointer-events: none; }
+  #objective-label { font-size: 11px; font-weight: 700; letter-spacing: 3px; color: #2ec4b6; }
+  #objective { font-size: 18px; font-weight: 600; }
+  #prompt { position: absolute; left: 50%; top: 56%; transform: translateX(-50%); z-index: 6; display: none; background: rgba(20,12,38,0.85); border: 1px solid #ffc94d; color: #ffe9b0; font-weight: 700; font-size: 17px; border-radius: 8px; padding: 7px 16px; pointer-events: none; }
+  #banner { position: absolute; left: 50%; top: 24%; transform: translate(-50%, -50%) scale(0.92); z-index: 7; text-align: center; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; }
+  #banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #banner-title { font-family: "Anton", sans-serif; font-size: 52px; color: #ffc94d; text-shadow: 0 3px 0 #b3541e, 0 0 34px rgba(255,140,60,0.65); letter-spacing: 2px; }
+  #banner-sub { font-size: 19px; font-weight: 600; color: #fff; text-shadow: 0 2px 8px #000; }
+  .overlay { position: absolute; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(180deg, rgba(36,20,66,0.42), rgba(20,10,36,0.78)); text-align: center; }
+  .overlay.hidden { display: none; }
+  .game-title { font-family: "Anton", sans-serif; font-size: clamp(56px, 11vw, 118px); line-height: 0.95; color: #fff; text-shadow: 0 4px 0 #b3541e, 0 0 54px rgba(255,93,143,0.75); letter-spacing: 3px; }
+  .game-title span { color: #ffc94d; }
+  .tagline { font-size: 21px; font-weight: 600; letter-spacing: 4px; color: #ffd98a; text-transform: uppercase; margin: 10px 0 26px; }
+  .btn { pointer-events: auto; cursor: pointer; font-family: "Anton", sans-serif; font-size: 22px; letter-spacing: 2px; color: #241234; background: linear-gradient(180deg, #ffd98a, #ffc94d); border: 0; border-radius: 9px; padding: 12px 42px; margin: 5px; box-shadow: 0 4px 0 #b3541e; }
+  .btn:hover { filter: brightness(1.1); }
+  .btn.ghost { background: rgba(255,255,255,0.12); color: #fff; box-shadow: none; border: 1px solid rgba(255,255,255,0.4); }
+  #howto { max-width: 560px; background: rgba(16,8,30,0.88); border: 1px solid rgba(255,201,77,0.5); border-radius: 12px; padding: 18px 26px; margin-top: 14px; font-size: 16.5px; line-height: 1.5; text-align: left; }
+  #howto b { color: #ffc94d; }
+  #pause-overlay .game-title { font-size: 64px; }
+  #wasted-overlay { background: rgba(60,4,10,0.55); }
+  #wasted-overlay .game-title { color: #ff3b4e; text-shadow: 0 4px 0 #4d0210, 0 0 44px rgba(255,40,60,0.7); }
 </style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
 </head>
 <body>
-<canvas id="game" aria-label="Velora Bay: a top-down open-world crime game at dusk. Drive with WASD, enter cars with E, toggle headlights with L, aim with the mouse."></canvas>
-<p id="status" role="status" aria-live="polite"></p>
+<div id="app">
+  <div id="hud-topleft" class="hud">
+    <div id="money">$250</div>
+    <div id="rank">Nobody</div>
+    <div id="respectbar"><div id="respect"></div></div>
+  </div>
+  <div id="hud-topright" class="hud">
+    <div id="stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+    <div id="clock">17:40</div>
+    <div id="timer"></div>
+  </div>
+  <div id="minimap-wrap"><canvas id="minimap" width="220" height="220"></canvas></div>
+  <div id="objective-wrap"><div id="objective-label">Objective</div><div id="objective">Explore Velora Bay</div></div>
+  <div id="prompt"></div>
+  <div id="banner"><div id="banner-title"></div><div id="banner-sub"></div></div>
+
+  <div id="menu-overlay" class="overlay">
+    <div class="game-title">VELORA <span>BAY</span></div>
+    <div class="tagline">Every tide brings trouble</div>
+    <button class="btn" id="btn-new">New Game</button>
+    <button class="btn ghost" id="btn-continue">Continue</button>
+    <button class="btn ghost" id="btn-how">How to Play</button>
+    <div id="howto" style="display:none">
+      <b>WASD / arrows</b> — walk &amp; drive &nbsp;·&nbsp; <b>Shift</b> — sprint<br>
+      <b>F / E</b> — enter / exit any car (carjack it!) &nbsp;·&nbsp; <b>Space</b> — handbrake<br>
+      <b>Mouse drag</b> — orbit camera &nbsp;·&nbsp; <b>Wheel</b> — zoom &nbsp;·&nbsp; <b>P / Esc</b> — pause<br>
+      Take jobs at the <b>gold beacon</b>, earn cash and respect, and whatever you do —
+      don't let the VBPD keep eyes on you. Heat fades when nobody sees you.
+    </div>
+  </div>
+
+  <div id="pause-overlay" class="overlay hidden">
+    <div class="game-title">PAUSED</div>
+    <div class="tagline" id="pause-stats">—</div>
+    <button class="btn" id="btn-resume">Resume</button>
+    <button class="btn ghost" id="btn-quit">Quit to Title</button>
+  </div>
+
+  <div id="wasted-overlay" class="overlay hidden">
+    <div class="game-title">WASTED</div>
+    <div class="tagline">The bay spits you back out… poorer.</div>
+    <button class="btn" id="btn-respawn">Wake Up</button>
+  </div>
+</div>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

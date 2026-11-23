@@ -4,79 +4,59 @@
 
 # VELORA BAY — Every Tide Brings Trouble
 
-A top-down 2D open-world crime game in the spirit of the genre's classics, built from scratch
-with plain JavaScript, canvas and WebAudio. No engine, no network: every building, car and
-palm tree is drawn in code, and every sound — engines, sirens, gunfire, three radio stations,
-even the evening surf and crickets — is synthesized live. The only bundled assets are two
-typefaces (Anton and Rajdhani, in `game/fonts/`), loaded locally so the game never fetches.
+A **full 3D third-person open-world crime game**, rebuilt from scratch on Three.js
+(vendored under `game/vendor/` — no downloads, no network, fully offline). You walk,
+sprint, carjack and drive through a sunset-drenched coastal city of pastel towers,
+glowing windows, neon signs, palm-lined streets, a beach and a pier — while the VBPD
+watches, pursues, and rams.
 
-**Art direction — dusk in a Vice city.** The whole game is graded for golden hour: a pink-to-
-teal sunset wash and vignette over sun-soaked pastel districts, teal bay water with animated
-shimmer, textured asphalt with worn gold lane markings and crosswalks, rooftops with parapets,
-AC units, vents and water tanks under long east-falling shadows, glowing neon signage (Hotel
-Coral, Café Palma, Disco Marina…), palm trees everywhere, beach umbrellas, streetlights with
-warm glow pools, and cars with shaded bodies, glass, headlight cones and flashing VBPD
-lightbars. The HUD is dark glass with neon-gold edges, drawn vector wanted stars, a minimap
-coloured like the world itself, Anton for titles and big numbers, Rajdhani for everything else.
-Static city detail is pre-rendered to offscreen layers so the dusk look stays smooth.
-
-You are **Ray Solano**, a driver with a past, washing up in a dusk-lit coastal city of six
-districts. Fixer **Marla Voss** (The Gilded Eel club) and mechanic **Dex Ibarra** (Velora Auto
-Works) feed you work; the Corsair syndicate and its boss **Vex Moretti** feed you trouble.
-Eight story jobs build one arc from nobody to **Kingpin of Velora**.
+**Art direction — golden hour in a Vice city.** A gradient dusk sky with fog, a low
+orange sun, emissive lit windows on every tower, neon signage (Disco Marina, Casino
+Azul, Hotel Solana, Pizza Sol, Velora Motors), animated teal bay water, blob shadows
+instead of shadow maps for speed, and a DOM HUD in Anton + Rajdhani (both bundled
+locally) with a live canvas minimap.
 
 ## What's in the game
 
-- **A living city** — six named districts (Downtown, Uptown, Palm Heights, Old Town, Portside,
-  Marina & Beach) on a real road grid with lanes and intersections, sidewalks, hundreds of
-  buildings with collision, a beach, a marina with piers and yachts, palms, lamps and props.
-  A full day cycle runs from dusk through night to dawn, with lamps and headlights at dark.
-- **On foot and behind the wheel** — WASD movement with sprint, mouse aim, enter any car with
-  E, arcade driving with drifting, skid marks, damage, smoke, fire and chain-reaction
-  explosions. **Carjack** drivers out of stopped cars.
-- **The VBPD wanted system, 0–5 stars** — witnessed crimes raise heat; break line of sight and
-  it cools. Patrol and pursuit cars with real chase AI, **roadblocks from 3 stars**, foot
-  officers who shoot at high stars, and a **police helicopter with a searchlight at 4 stars**
-  that keeps you "seen". Get caught slow near an officer and you're **BUSTED**; hit zero
-  health and you're **WASTED** — either way you wake up poorer at the hospital or VBPD Central.
-- **Combat** — fists, pistol, SMG and scattergun in slots 1–4 with a hold-Q **weapon wheel**,
-  ammo, muzzle flashes, tracers and drive-by shooting.
-- **Eight story jobs** — a pier pickup and delivery, stealing a gold Vantara GT under a forced
-  2-star heat, tailing a Corsair courier without being spotted, ramming a convoy van and
-  losing the heat with its cargo, a four-minute harbor run at 3 stars, escorting Dex through
-  two ambushes, winning the Marina Mile street race, and stealing an armored Vault Hauler from
-  its guards at a forced 5 stars. Dialogue before and after every job, GPS-routed objective
-  markers on the minimap.
-- **Side work** — two checkpoint **street races** against AI drivers with rubber-banding,
-  **taxi fares** from hailing passengers (smooth rides earn tips), and repeatable respect from
-  the street.
-- **Shops and services** — **Harbor Arms** sells weapons (respect-locked), ammo and armor;
-  **Velora Auto Works** repairs, resprays (sheds heat) and lets you lay low; the **safehouse**
-  heals and saves. Progress also **autosaves after every job**.
-- **Respect ranks** — Nobody → Runner → Wheelman → Hustler → Fixer → Shot Caller → Underboss →
-  Kingpin of Velora, tracked in the HUD and the pause screen with full run stats.
-- **Radio and sound** — three generative WebAudio stations (Neon FM synthwave, Palma Waves
-  chill, Chrome Radio house) on the R key, an engine voice tied to speed, distance-based
-  sirens, and synthesized gunfire, crashes and explosions. M mutes.
-- **HUD and minimap** — health and armor, cash, weapon and ammo, wanted stars, the clock, the
-  current district, mission banners and objective text, and a live minimap with roads, water,
-  police blips, your GPS route and the objective marker.
+- **A real 3D city** — a 7×7 street grid (~360 m across) of city blocks with sidewalk
+  aprons, crosswalks, lane dashes, streetlights, ~46 street palms plus beach palms,
+  hundreds of collidable buildings, a sand beach, animated water and a wooden pier.
+- **Third-person on foot** — an articulated low-poly character with a procedural walk
+  cycle, sprint, idle breathing and a driving pose; orbit camera with mouse drag,
+  wheel zoom and auto-follow that eases in behind you as you move.
+- **Driving & carjacking** — arcade car physics (acceleration, drift handbrake,
+  AABB collision push-out, spinning/steering wheels) across your own car, 10 AI
+  traffic cars looping the grid, and ~14 parked cars. Walk up to **any** car and
+  press F to take it — if someone sees you, that's a crime.
+- **The VBPD wanted system, 0–5 stars** — witnessed carjacks, collisions and
+  pedestrian strikes add heat; up to 4 police units spawn and pursue with ramming
+  AI and flashing red/blue lightbars. Break line of sight for 12 seconds and a star
+  fades. Get wrecked and you're **WASTED** — you wake up at the hospital, poorer.
+- **Three story jobs** at the gold beacon — *Marina Run* (a timed pier pickup and
+  downtown delivery, $400), *Checkpoint Rush* (six checkpoints against the clock,
+  $600), and *Heat Escape* (reach 3 stars, then lose the heat completely, $800).
+- **Respect ranks** — Nobody → Runner → Wheelman → Hustler → Fixer → Shot Caller →
+  Underboss → Kingpin of Velora, tracked in the HUD; progress autosaves to
+  `localStorage` after every job (Continue on the title screen).
+- **Pedestrians** — ten citizens wander the sidewalks, and scatter when a fast car
+  comes at them.
+- **Synthesized sound** — a WebAudio engine voice tied to speed, distance-based
+  two-tone sirens, success/fail jingles and crash thuds. No audio files.
+- **HUD & minimap** — cash, respect bar and rank, wanted stars, the game clock, job
+  timer, objective banner, interaction prompts, and a minimap with streets, water,
+  traffic, police blips and the pulsing gold job marker.
 
 ## Controls
 
 | Input | Action |
 | --- | --- |
-| WASD / arrows | Move / drive |
+| WASD / arrows | Walk / drive |
 | Shift | Sprint |
+| F / E | Enter / exit any car |
 | Space | Handbrake |
-| Mouse | Aim · click to shoot (drive-bys included) |
-| E | Enter cars, talk, buy, use services |
-| F | Exit car |
-| 1–4 or hold Q / Tab | Weapon slots / weapon wheel |
-| R | Cycle radio station |
-| L | Toggle headlights |
-| M | Mute |
-| Esc / P | Pause (stats, ranks, save & quit) |
+| Mouse drag | Orbit camera |
+| Mouse wheel | Camera zoom |
+| P / Esc | Pause |
 
 ## Run it
 
@@ -84,18 +64,18 @@ Eight story jobs build one arc from nobody to **Kingpin of Velora**.
 node serve.ts            # serves game/ on http://localhost:8080
 ```
 
-Then open <http://localhost:8080> in a desktop browser. The game runs entirely from static
-files — it works offline, and progress is kept in `localStorage`.
+Then open <http://localhost:8080> in a desktop browser. The game runs entirely from
+static files — it works offline, and progress is kept in `localStorage`.
 
 For the make.fun hand-in, `node main.ts` verifies the entry and writes the dossier to
 `/output` (or `$MAKEFUN_OUTPUT_DIR`).
 
 ## Screenshots
 
-1. `screenshots/1-title.jpg` — the title screen over the marina at dusk (cover)
-2. `screenshots/2-chase.jpg` — a four-star VBPD pursuit under the helicopter's light
-3. `screenshots/3-mission.jpg` — Marla Voss offers the first job at The Gilded Eel
-4. `screenshots/4-city.jpg` — the coast road, marina and downtown at dusk
+1. `screenshots/1-title.jpg` — the title screen over downtown at sunset (cover)
+2. `screenshots/2-foot.jpg` — on foot at the crosswalk, first job on the HUD
+3. `screenshots/3-chase.jpg` — a three-star VBPD pursuit through downtown
+4. `screenshots/4-vista.jpg` — the shoreline: water, sand, palms and the skyline
 
 Every scene is a real frame of the running game, staged deterministically through
 `?shot=<scene>&seed=<n>` (see `game/src/shots.js` and `shots.json`).

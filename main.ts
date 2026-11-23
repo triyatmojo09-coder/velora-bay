@@ -1,8 +1,10 @@
 // Velora Bay's gta6-01 entry (Node 22, standard library only). The game is this directory's
-// game/ folder — plain static files a desktop browser loads fully offline (game/index.html and
-// its ES modules; every picture is drawn on a canvas and every sound is synthesized with
-// WebAudio). The only binary assets are the bundled Anton / Rajdhani woff2 faces under
-// game/fonts/, verified below like the modules, so the page never fetches a font at runtime.
+// game/ folder — plain static files a desktop browser loads fully offline: a full 3D
+// third-person open-world rebuild on Three.js (vendored under game/vendor/, excluded from
+// the dossier's source text by the library's own classification), ES modules under
+// game/src/, and every sound synthesized with WebAudio. The only binary assets besides the
+// vendored library are the bundled Anton / Rajdhani woff2 faces under game/fonts/, verified
+// below like the modules, so the page never fetches a font or a script at runtime.
 // This program hands the entry in: it first walks game/ and screenshots/ and verifies the
 // entry is whole (the page, its module graph, its fonts, four screenshots inside the scorer's
 // size cap), then copies both folders to /output and writes /output/dossier.json, the summary
@@ -24,22 +26,31 @@ const out = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 const GAME_MODULES = [
   'index.html',
   'src/config.js',
-  'src/random.js',
   'src/city.js',
-  'src/world.js',
+  'src/character.js',
+  'src/vehicles.js',
   'src/missions.js',
-  'src/audio.js',
+  'src/hud.js',
   'src/input.js',
-  'src/render.js',
+  'src/audio.js',
   'src/shots.js',
   'src/main.js',
 ];
 
+/** The vendored Three.js build the import map points at — required, and never a stub. */
+const GAME_VENDORED = ['vendor/three.module.min.js'];
+const VENDORED_MIN_BYTES = 500000;
+
 /** Bundled typefaces the page loads from game/fonts/ — required, like any module. */
-const GAME_FONTS = ['fonts/anton-latin.woff2', 'fonts/rajdhani-600-latin.woff2'];
+const GAME_FONTS = [
+  'fonts/anton-latin.woff2',
+  'fonts/rajdhani-500-latin.woff2',
+  'fonts/rajdhani-600-latin.woff2',
+  'fonts/rajdhani-700-latin.woff2',
+];
 
 /** The four screenshots, cover first, matching shots.json. */
-const SCREENSHOTS = ['1-title.jpg', '2-chase.jpg', '3-mission.jpg', '4-city.jpg'];
+const SCREENSHOTS = ['1-title.jpg', '2-foot.jpg', '3-chase.jpg', '4-vista.jpg'];
 
 /** The scorer refuses any single screenshot over 256 KiB; the entry checks itself first. */
 const SCREENSHOT_MAX_BYTES = 262144;
@@ -63,6 +74,10 @@ function verifyEntry(gameDir, shotsDir) {
   for (const rel of [...GAME_MODULES, ...GAME_FONTS]) {
     const file = join(gameDir, rel);
     if (!existsSync(file) || statSync(file).size === 0) problems.push(`missing game/${rel}`);
+  }
+  for (const rel of GAME_VENDORED) {
+    const file = join(gameDir, rel);
+    if (!existsSync(file) || statSync(file).size < VENDORED_MIN_BYTES) problems.push(`missing or truncated game/${rel}`);
   }
   for (const name of SCREENSHOTS) {
     const file = join(shotsDir, name);

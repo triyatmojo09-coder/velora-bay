@@ -1,102 +1,64 @@
-// Deterministic staged scenes for the entry screenshots, in the spirit of the kit's original
-// shot helper: ?shot=<name>&seed=<n> builds a fixed tableau on a fresh world, and the normal
-// simulation keeps running afterwards so the scene stays alive (traffic flows, lightbars flash,
-// the water shimmers, the helicopter holds its light on Ray). Scenes: title (the title screen
-// over the marina), chase (a four-star pursuit with a roadblock ahead), mission (Marla's first
-// job offer, dialogue panel up), city (a wide dusk view over downtown and the bay).
+// VELORA BAY 3D — deterministic screenshot staging for ?shot=title|foot|chase|vista.
+// main.js builds the normal world first, then calls stageShot() to pose everything.
+// Gameplay stays frozen (except water, lightbars and idle animation) while a shot is staged.
+import * as THREE from 'three';
 
-export function parseShot() {
-  const params = new URLSearchParams(window.location.search);
-  const name = params.get('shot');
-  if (name === null) return null;
-  const seed = Number.parseInt(params.get('seed') ?? '1', 10);
-  return { name, seed: Number.isFinite(seed) && seed > 0 ? seed : 1 };
-}
+export function stageShot(name, ctx) {
+  const { camera, player, playerCar, traffic, police, state, hud, beacon } = ctx;
+  const place = (obj, x, z, heading) => {
+    obj.pos ? (obj.pos.x = x, obj.pos.z = z) : obj.group.position.set(x, 0, z);
+    if (obj.heading !== undefined) obj.heading = heading;
+    if (obj.syncMesh) obj.syncMesh();
+    if (obj.group && obj.pos === undefined) obj.group.rotation.y = heading;
+  };
+  const lookCam = (cx, cy, cz, tx, ty, tz) => {
+    camera.position.set(cx, cy, cz);
+    camera.lookAt(tx, ty, tz);
+  };
 
-function stageTitle(state) {
-  state.clock = 18.4 * 60; // golden hour: warm wash high, lamps just coming on
-  const p = state.player;
-  p.x = 4470;
-  p.y = 2350;
-  p.angle = -Math.PI / 2;
-  state.spawnCar('sports', 4380, 2560, -0.4, { kind: 'parked' });
-  state.spawnCar('sedan', 4360, 2140, 0.2, { kind: 'parked' });
-}
-
-function stageChase(state) {
-  state.clock = 18.9 * 60; // late golden hour: long shadows, headlight cones and lightbars pop
-  const p = state.player;
-  const car = state.spawnCar('sports', 980, 1100, 0, { kind: 'player' });
-  car.vx = 320;
-  p.car = car;
-  p.x = car.x;
-  p.y = car.y;
-  state.wanted.stars = 4;
-  state.wanted.heat = 210;
-  state.wanted.floor = 175;
-  const cop1 = state.spawnCar('police', 690, 1052, 0.1, { kind: 'police', driver: true });
-  cop1.vx = 300;
-  const cop2 = state.spawnCar('police', 620, 1152, -0.08, { kind: 'police', driver: true });
-  cop2.vx = 295;
-  // The roadblock waits at the next crossroads, parked across the lanes, officers out.
-  for (const [y, a] of [[1050, Math.PI / 2], [1150, -Math.PI / 2]]) {
-    const block = state.spawnCar('police', 2420, y, a, { kind: 'police', driver: false });
-    block.ai = { stuckT: 0, revT: 0, holdPosition: true };
+  if (name === 'title') {
+    // High at the marina, looking west across downtown at sunset. Menu overlay is DOM.
+    place(player, 120, 40, -1.2);
+    player.group.position.set(120, 0, 40); player.group.rotation.y = -1.2;
+    lookCam(196, 26, 96, -40, 6, -30);
+    state.setObjective('');
+    return;
   }
-  for (const off of [-70, 70]) {
-    const cop = state.spawnPed(2420 + off, 1100 + (off < 0 ? -52 : 52), 'cop');
-    cop.state = 'attack';
+  if (name === 'foot') {
+    // On foot mid-street at the crosswalk, a car passing, towers and palms around, job HUD live.
+    place(player, 2, -50, 0.5);
+    player.group.position.set(2, 0, -50); player.group.rotation.y = 0.5;
+    if (traffic[0]) { traffic[0].sim.pos.x = -17; traffic[0].sim.pos.z = -51; traffic[0].sim.heading = Math.PI / 2; traffic[0].sim.syncMesh(); }
+    state.startJob(0);
+    hud.setStars(0);
+    lookCam(8.6, 3.0, -58.6, 1, 1.3, -49);
+    return;
   }
-  state.spawnCar('sedan', 1500, 1142, 0, { kind: 'traffic', driver: true });
-  state.heli = { x: car.x - 170, y: car.y - 200, angle: 0.7, rotor: 0 };
-  state.setBanner('VBPD PURSUIT', 'Four stars — the roadblock is waiting at Palm Cross');
-  state.banner.dur = 1e9;
-  state.objective = { x: 2440, y: 1100, label: 'Outrun the VBPD', route: null };
-}
-
-function stageMission(state) {
-  state.clock = 18.35 * 60; // earliest golden hour: the Gilded Eel's neon reads against warm light
-  const p = state.player;
-  // Ray stands at the Gilded Eel's door; the boot code "talks" on an early frame, which starts
-  // Marla's first job through the director's normal offer path, dialogue panel and all.
-  p.x = 712;
-  p.y = 1470;
-  p.angle = -Math.PI / 2;
-  state.spawnCar('sedan', 620, 1590, 0.12, { kind: 'parked' });
-  state.spawnCar('compact', 900, 1330, -0.1, { kind: 'parked' });
-  state.cameraOverride = { x: 730, y: 1430, zoom: 1.25 };
-}
-
-function stageCity(state) {
-  state.clock = 18.8 * 60; // sunset over the bay: teal water, pink sky wash, palms in silhouette
-  const p = state.player;
-  // Ray stands on the coast road; ambient traffic and pedestrians spawn around him, in frame.
-  // The camera sits west of the shore so palms, neon rooftops, beach and shimmering water share the frame.
-  p.x = 4360;
-  p.y = 1900;
-  p.angle = -Math.PI / 2;
-  state.cameraOverride = { x: 4050, y: 1800, zoom: 0.52 };
-  const kinds = ['sedan', 'compact', 'taxi', 'sports', 'suv', 'van', 'sedan'];
-  for (let i = 0; i < kinds.length; i += 1) {
-    const east = i % 2 === 0;
-    const car = state.spawnCar(kinds[i], 2450 + i * 260, east ? 1142 : 1058, east ? 0 : Math.PI, { kind: 'traffic', driver: true });
-    car.ai = state.trafficInit(car);
+  if (name === 'chase') {
+    // Player car mid-intersection, two VBPD units behind with lightbars flashing, 3 stars.
+    place(playerCar, 0, 4, 0.15);
+    playerCar.speed = 14;
+    ctx.enterCarVisual(playerCar);
+    const spots = [[-4.2, -9.5, 0.1], [5.2, -13.5, -0.12]];
+    police.forEach((p, i) => {
+      if (i < 2) {
+        p.active = true;
+        p.sim.pos.x = spots[i][0]; p.sim.pos.z = spots[i][1]; p.sim.heading = spots[i][2];
+        p.sim.speed = 13; p.sim.syncMesh(); p.sim.group.visible = true;
+      }
+    });
+    state.setWanted(3);
+    state.startJob(2);
+    hud.setStars(3);
+    lookCam(8.2, 3.6, 19.5, 0, 1.1, -3);
+    return;
   }
-  // Coast-road traffic flowing past the marina, both ways.
-  for (let i = 0; i < 4; i += 1) {
-    const north = i % 2 === 0;
-    const car = state.spawnCar(['sports', 'sedan', 'taxi', 'suv'][i], north ? 4318 : 4402, 900 + i * 620, north ? -Math.PI / 2 : Math.PI / 2, { kind: 'traffic', driver: true });
-    car.ai = state.trafficInit(car);
+  if (name === 'vista') {
+    // At the water's edge looking west over the city, player small in the foreground.
+    place(player, 171, 17, -1.35);
+    player.group.position.set(171, 0, 17); player.group.rotation.y = -1.35;
+    state.setObjective('Velora Bay — every tide brings trouble.');
+    lookCam(191, 4.6, 31, 55, 9, -8);
+    return;
   }
-  state.spawnCar('sports', 4480, 2260, 0.3, { kind: 'parked' });
-  state.spawnCar('compact', 4490, 1420, -0.2, { kind: 'parked' });
-}
-
-export function stageShot(state, director, name) {
-  state.shotMode = true;
-  if (name === 'chase') stageChase(state);
-  else if (name === 'mission') stageMission(state);
-  else if (name === 'city') stageCity(state);
-  else stageTitle(state);
-  void director;
 }
