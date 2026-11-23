@@ -1,5 +1,7 @@
 // Velora Bay's tuning tables: world size, weapons, vehicles, respect ladder and palette.
 // Everything named here is original to this game — an invented city, invented people, invented cars.
+// Art direction (v2): a sun-soaked dusk city — Vice-pink sunset, teal bay water, coral and
+// turquoise neon — set in type with Anton for display and Rajdhani for UI, bundled in game/fonts/.
 
 export const STEP = 1 / 60;
 
@@ -32,8 +34,9 @@ export const CAR_TYPES = {
   truck: { name: 'Vault Hauler', maxSpeed: 232, accel: 200, grip: 2.6, hp: 420, w: 44, l: 92 },
   police: { name: 'VBPD Interceptor', maxSpeed: 335, accel: 312, grip: 3.6, hp: 115, w: 36, l: 70 },
 };
-export const CAR_COLORS = ['#c94f38', '#3e6fb0', '#d9a441', '#4d9e6b', '#8a8f98', '#e3e0d8', '#5b4a8a', '#b03a5e', '#2f8f8a', '#704214', '#22303c', '#7a1f1f'];
-export const SPORTS_COLORS = ['#e8b13a', '#c22430', '#28418c', '#0f7a6d', '#e6e6e6', '#15151a'];
+/** Vice-era paint: coral, turquoise, flamingo pink, sunset gold, mint, cream — no rental-car grey. */
+export const CAR_COLORS = ['#ff6b57', '#19b5a6', '#ff8fb2', '#ffc53d', '#7bd88f', '#f4ead5', '#ff7847', '#4cc9f0', '#c77dff', '#ff5d8f', '#2ec4b6', '#ffd166'];
+export const SPORTS_COLORS = ['#ffd166', '#ff2e63', '#08d9d6', '#ff8c42', '#f9f7f7', '#b5179e'];
 
 /** Respect ladder: [threshold, title]. Shown in the HUD and on the pause screen. */
 export const RANKS = [
@@ -62,19 +65,52 @@ export function rankFor(respect) {
 /** Heat points at which each wanted star switches on (index = stars). */
 export const STAR_THRESHOLDS = [0, 25, 60, 110, 175, 260, Infinity];
 
-/** Dusk-first palette: hot coral, teal sea, cream light, deep navy night. */
+/** Bundled typefaces — the only fonts the game is allowed to draw with. */
+export const FONTS = {
+  display: '"Anton", "Rajdhani", sans-serif',
+  ui: '"Rajdhani", sans-serif',
+};
+
+/** Invented neon signage painted onto rooftops and facades around the bay. */
+export const NEON_SIGNS = [
+  { text: 'HOTEL CORAL', color: '#ff5d8f' },
+  { text: 'CAFÉ PALMA', color: '#4cc9f0' },
+  { text: 'TIKI BAR', color: '#ffd166' },
+  { text: 'VELORA INN', color: '#2ec4b6' },
+  { text: 'DISCO MARINA', color: '#c77dff' },
+  { text: 'NOODLE 88', color: '#ff7847' },
+  { text: 'SURF SHACK', color: '#7bd88f' },
+  { text: 'CASINO AZUL', color: '#4cc9f0' },
+  { text: 'PIZZA SOL', color: '#ff6b57' },
+  { text: 'CLUB NEON', color: '#ff2e63' },
+];
+
+/**
+ * Dusk Vice palette: warm sand and coral ground, teal water, dark blue-violet asphalt
+ * (never flat grey), cream sidewalks warmed by the low sun.
+ */
 export const PALETTE = {
-  grass: '#3d6b46',
-  park: '#47824f',
-  sand: '#dec088',
-  water: '#175d75',
-  waterDeep: '#0f4258',
-  road: '#33363d',
-  roadEdge: '#26282e',
-  lane: '#d8cf9f',
-  sidewalk: '#9aa0a3',
-  lot: '#8f8a80',
-  plaza: '#a89a83',
+  grass: '#2e7d5b',
+  park: '#359668',
+  sand: '#f2c98a',
+  sandWet: '#e0aa6e',
+  water: '#12a5b4',
+  waterDeep: '#0b5e7a',
+  waterFoam: '#b8fff4',
+  road: '#2b2a3d',
+  roadEdge: '#1d1c2b',
+  lane: '#ffd98a',
+  sidewalk: '#d9c7a7',
+  sidewalkEdge: '#b8a37e',
+  lot: '#3d3a4d',
+  plaza: '#e6cfa3',
+  sunsetPink: '#ff5d8f',
+  sunsetOrange: '#ff8c42',
+  sunsetGold: '#ffd166',
+  teal: '#2ec4b6',
+  skyDeep: '#241b4d',
+  glass: 'rgba(16,14,36,0.72)',
+  glassEdge: 'rgba(255,209,102,0.55)',
 };
 
 export const SAVE_KEY = 'velora-bay-save-v1';

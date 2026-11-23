@@ -1,10 +1,12 @@
 // Velora Bay's gta6-01 entry (Node 22, standard library only). The game is this directory's
 // game/ folder — plain static files a desktop browser loads fully offline (game/index.html and
 // its ES modules; every picture is drawn on a canvas and every sound is synthesized with
-// WebAudio, so there is nothing to fetch). This program hands the entry in: it first walks
-// game/ and screenshots/ and verifies the entry is whole (the page, its module graph, four
-// screenshots inside the scorer's size cap), then copies both folders to /output and writes
-// /output/dossier.json, the summary the judge reads, with the vendored make.fun library.
+// WebAudio). The only binary assets are the bundled Anton / Rajdhani woff2 faces under
+// game/fonts/, verified below like the modules, so the page never fetches a font at runtime.
+// This program hands the entry in: it first walks game/ and screenshots/ and verifies the
+// entry is whole (the page, its module graph, its fonts, four screenshots inside the scorer's
+// size cap), then copies both folders to /output and writes /output/dossier.json, the summary
+// the judge reads, with the vendored make.fun library.
 //
 // Serve it locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
@@ -33,6 +35,9 @@ const GAME_MODULES = [
   'src/main.js',
 ];
 
+/** Bundled typefaces the page loads from game/fonts/ — required, like any module. */
+const GAME_FONTS = ['fonts/anton-latin.woff2', 'fonts/rajdhani-600-latin.woff2'];
+
 /** The four screenshots, cover first, matching shots.json. */
 const SCREENSHOTS = ['1-title.jpg', '2-chase.jpg', '3-mission.jpg', '4-city.jpg'];
 
@@ -55,7 +60,7 @@ function listFiles(root, prefix = '') {
  */
 function verifyEntry(gameDir, shotsDir) {
   const problems = [];
-  for (const rel of GAME_MODULES) {
+  for (const rel of [...GAME_MODULES, ...GAME_FONTS]) {
     const file = join(gameDir, rel);
     if (!existsSync(file) || statSync(file).size === 0) problems.push(`missing game/${rel}`);
   }

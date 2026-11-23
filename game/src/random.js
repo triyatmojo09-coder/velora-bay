@@ -23,6 +23,22 @@ export function createRandom(seed) {
     pick(list) {
       return list[Math.floor(next() * list.length)];
     },
+    /**
+     * Weighted pick: entries are [value, weight] pairs (or objects with a weight field).
+     * City dressing uses this so palms and neon signs appear often, rare props sparingly —
+     * and the choice stays seeded, so a screenshot scene is identical on every run.
+     */
+    weightedPick(entries) {
+      let total = 0;
+      for (const e of entries) total += Array.isArray(e) ? e[1] : (e.weight ?? 1);
+      let roll = next() * total;
+      for (const e of entries) {
+        roll -= Array.isArray(e) ? e[1] : (e.weight ?? 1);
+        if (roll <= 0) return Array.isArray(e) ? e[0] : e;
+      }
+      const last = entries[entries.length - 1];
+      return Array.isArray(last) ? last[0] : last;
+    },
     chance(p) {
       return next() < p;
     },

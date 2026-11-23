@@ -1,7 +1,9 @@
 // The story of Velora Bay: eight jobs for fixer Marla Voss and mechanic Dex Ibarra that take Ray
 // Solano from nobody to kingpin, plus street races and taxi work. The director below runs the
 // active job's phase machine, keeps the objective marker and GPS route fresh, and pays out cash
-// and respect. All people, crews and places are invented for this game.
+// and respect. All people, crews and places are invented for this game. The jobs all play out at
+// golden hour: venues are named by their neon — the Gilded Eel's red sign, the Auto Works' gold
+// letters, the Marina Pavilion's teal glow — so the story and the dusk art direction agree.
 import { STAR_THRESHOLDS } from './config.js';
 import { dist } from './world.js';
 
@@ -20,7 +22,7 @@ const INTROS = {
   wheels: [
     { who: 'MARLA', text: 'Ray Solano. Heard you can drive and keep your mouth shut. Both are rare in Velora Bay.' },
     { who: 'RAY', text: 'Depends what the tide brings in, Marla.' },
-    { who: 'MARLA', text: 'A package, at the end of the middle marina pier. Pick it up, bring it to the Old Town drop. Quiet and quick.' },
+    { who: 'MARLA', text: 'Golden hour, neon coming on — best light in the bay, worst time to be seen. A package waits at the end of the middle marina pier. Pick it up, bring it to the Old Town drop. Quiet and quick.' },
     { who: 'MARLA', text: 'Do it clean and there will be more work. Do it loud... there will be different work.' },
   ],
   hotproperty: [
@@ -44,7 +46,7 @@ const INTROS = {
     { who: 'DEX', text: 'Drive me there, Ray. If anything with a Corsair flag comes near this car, it comes through you first.' },
   ],
   streetking: [
-    { who: 'MARLA', text: 'Three crews think they own the Marina Mile. Tonight we correct them: a checkpoint race, winner takes the street.' },
+    { who: 'MARLA', text: 'Three crews think they own the Marina Mile. Tonight, under the DISCO MARINA neon, we correct them: a checkpoint race, winner takes the street.' },
     { who: 'MARLA', text: 'Bring a fast car and finish first. Second place is just the fastest loser, and I do not pay losers.' },
   ],
   lastnight: [

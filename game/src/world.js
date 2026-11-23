@@ -64,6 +64,8 @@ export function createWorld(rng, city) {
     race: null,
     taxi: null,
     camShake: 0,
+    /** Headlight cones at dusk: on by default, toggled with the L key (see input/main). */
+    headlightsOn: true,
   };
 
   // ---------- spawning ----------
@@ -99,8 +101,8 @@ export function createWorld(rng, city) {
       maxHp: kind === 'cop' ? 80 : kind === 'gang' ? 70 : 50,
       kind,
       name: opts.name ?? null,
-      shirt: opts.shirt ?? rng.pick(['#c94f38', '#3e6fb0', '#d9a441', '#4d9e6b', '#e3e0d8', '#b03a5e', '#2f8f8a', '#8a5f3c']),
-      pants: rng.pick(['#2c3242', '#4a3b2c', '#5d6068', '#22303c']),
+      shirt: opts.shirt ?? rng.pick(['#ff6b57', '#19b5a6', '#ffc53d', '#ff8fb2', '#f4ead5', '#ff5d8f', '#4cc9f0', '#ffb26b']),
+      pants: rng.pick(['#2c3242', '#f4ead5', '#3a6ea5', '#22303c', '#e88ca0']),
       state: 'walk',
       tx: x, ty: y, targetT: 0, fleeT: 0, fireCd: rng.range(0.5, 1.5),
       walk: rng.range(0, 6),

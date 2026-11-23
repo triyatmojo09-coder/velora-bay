@@ -5,9 +5,20 @@
 # VELORA BAY — Every Tide Brings Trouble
 
 A top-down 2D open-world crime game in the spirit of the genre's classics, built from scratch
-with plain JavaScript, canvas and WebAudio. No engine, no assets, no network: every building,
-car and palm tree is drawn in code, and every sound — engines, sirens, gunfire, three radio
-stations — is synthesized live.
+with plain JavaScript, canvas and WebAudio. No engine, no network: every building, car and
+palm tree is drawn in code, and every sound — engines, sirens, gunfire, three radio stations,
+even the evening surf and crickets — is synthesized live. The only bundled assets are two
+typefaces (Anton and Rajdhani, in `game/fonts/`), loaded locally so the game never fetches.
+
+**Art direction — dusk in a Vice city.** The whole game is graded for golden hour: a pink-to-
+teal sunset wash and vignette over sun-soaked pastel districts, teal bay water with animated
+shimmer, textured asphalt with worn gold lane markings and crosswalks, rooftops with parapets,
+AC units, vents and water tanks under long east-falling shadows, glowing neon signage (Hotel
+Coral, Café Palma, Disco Marina…), palm trees everywhere, beach umbrellas, streetlights with
+warm glow pools, and cars with shaded bodies, glass, headlight cones and flashing VBPD
+lightbars. The HUD is dark glass with neon-gold edges, drawn vector wanted stars, a minimap
+coloured like the world itself, Anton for titles and big numbers, Rajdhani for everything else.
+Static city detail is pre-rendered to offscreen layers so the dusk look stays smooth.
 
 You are **Ray Solano**, a driver with a past, washing up in a dusk-lit coastal city of six
 districts. Fixer **Marla Voss** (The Gilded Eel club) and mechanic **Dex Ibarra** (Velora Auto
@@ -63,6 +74,7 @@ Eight story jobs build one arc from nobody to **Kingpin of Velora**.
 | F | Exit car |
 | 1–4 or hold Q / Tab | Weapon slots / weapon wheel |
 | R | Cycle radio station |
+| L | Toggle headlights |
 | M | Mute |
 | Esc / P | Pause (stats, ranks, save & quit) |
 

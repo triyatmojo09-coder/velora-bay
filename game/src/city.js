@@ -1,16 +1,19 @@
 // Velora Bay itself: a dusk-lit coastal city generated from a seed — six districts on a road
 // grid, the marina and beach on the east shore, hand-placed landmarks (safehouse, club, garage,
 // gun shop, hospital, police station), collision, and the intersection graph the GPS routes over.
-import { WORLD, ROADS_V, ROADS_H, ROAD_W, BEACH_X, WATER_X } from './config.js';
+import { WORLD, ROADS_V, ROADS_H, ROAD_W, BEACH_X, WATER_X, NEON_SIGNS } from './config.js';
 
 const DISTRICT_STYLES = {
-  Downtown: { heights: [90, 180], colors: ['#5a6b7d', '#6b7f95', '#4a5a6e', '#7d8ca3', '#54687e'], lots: 2 },
-  Uptown: { heights: [40, 95], colors: ['#8a7f72', '#9c8d7a', '#77685c', '#a08b74'], lots: 3 },
-  'Palm Heights': { heights: [16, 38], colors: ['#e0cfa8', '#d9b98c', '#cfe0e8', '#f0e2c4', '#e5d3ae'], lots: 4 },
-  'Old Town': { heights: [24, 58], colors: ['#b0724a', '#a25b3f', '#c08552', '#8a4f3a', '#bb7a4e'], lots: 4 },
-  Portside: { heights: [28, 55], colors: ['#7a6a55', '#5d6b73', '#8c7a5f', '#6b7c85'], lots: 1 },
-  'Marina & Beach': { heights: [30, 80], colors: ['#e8e2d4', '#d4e4ea', '#f2ead8'], lots: 2 },
+  Downtown: { heights: [90, 180], colors: ['#f4a9b8', '#7fd1d8', '#ffd9a0', '#a8c8ec', '#f7c8d8', '#8fe3cf'], lots: 2 },
+  Uptown: { heights: [40, 95], colors: ['#f7ead2', '#f2c9a4', '#cfe8dd', '#f9dcc4', '#e8d8f0'], lots: 3 },
+  'Palm Heights': { heights: [16, 38], colors: ['#fff3d6', '#ffd9ec', '#d2f2e4', '#ffe8b8', '#d8ecff'], lots: 4 },
+  'Old Town': { heights: [24, 58], colors: ['#e8906a', '#d96f4e', '#f0a878', '#c95f43', '#e8a06a'], lots: 4 },
+  Portside: { heights: [28, 55], colors: ['#7fb3c8', '#5f97ad', '#e0a878', '#6b9e8f'], lots: 1 },
+  'Marina & Beach': { heights: [30, 80], colors: ['#fff6e0', '#d8f4f8', '#ffe3ee'], lots: 2 },
 };
+
+/** Roof finishes cycled per building so no two rooftops read the same flat colour. */
+const ROOF_MATS = ['terracotta', 'teal', 'cream', 'coral', 'slate', 'sand'];
 
 export const POIS = [
   { id: 'safehouse', name: "Ray's Safehouse", sign: 'SAFEHOUSE', color: '#39d353', bx: 250, by: 1980, bw: 130, bh: 90, ht: 30, door: { x: 398, y: 2025 } },
@@ -86,7 +89,8 @@ export function buildCity(rng) {
       else cell.kind = 'blocks';
       cells.push(cell);
       if (cell.kind === 'park') {
-        for (let k = 0; k < 12; k += 1) props.push({ type: 'palm', x: rng.range(cell.x + 30, cell.x + cell.w - 30), y: rng.range(cell.y + 30, cell.y + cell.h - 30) });
+        for (let k = 0; k < 16; k += 1) props.push({ type: 'palm', x: rng.range(cell.x + 30, cell.x + cell.w - 30), y: rng.range(cell.y + 30, cell.y + cell.h - 30) });
+        for (let k = 0; k < 3; k += 1) props.push({ type: rng.weightedPick([['umbrella', 3], ['crate', 1], ['barrier', 1]]), x: rng.range(cell.x + 40, cell.x + cell.w - 40), y: rng.range(cell.y + 40, cell.y + cell.h - 40), color: rng.pick(['#ff5d8f', '#ffd166', '#2ec4b6', '#ff7847']) });
         continue;
       }
       if (cell.kind !== 'blocks') continue;
@@ -119,8 +123,11 @@ export function buildCity(rng) {
           buildings.push(makeBuilding(rng, inner.x + a * lotW + pad, inner.y + b * lotH + pad, lotW - pad * 2, lotH - pad * 2, style, 'building'));
         }
       }
-      if (district === 'Palm Heights') {
-        for (let k = 0; k < 4; k += 1) props.push({ type: 'palm', x: rng.range(cell.x + 16, cell.x + cell.w - 16), y: rng.range(cell.y + 16, cell.y + cell.h - 16) });
+      // Palms everywhere the sun reaches: weighted so most blocks get a cluster, some a lone tree.
+      const palmCount = rng.weightedPick([[2, 1], [4, 3], [6, 3], [8, 1]]);
+      for (let k = 0; k < palmCount; k += 1) props.push({ type: 'palm', x: rng.range(cell.x + 16, cell.x + cell.w - 16), y: rng.range(cell.y + 16, cell.y + cell.h - 16) });
+      if (district === 'Marina & Beach' || cell.x > 3800) {
+        for (let k = 0; k < 3; k += 1) props.push({ type: 'umbrella', x: rng.range(cell.x + 30, cell.x + cell.w - 30), y: rng.range(cell.y + 30, cell.y + cell.h - 30), color: rng.pick(['#ff5d8f', '#ffd166', '#2ec4b6']) });
       }
     }
   }
@@ -136,6 +143,12 @@ export function buildCity(rng) {
       kind: 'poi', poiId: poi.id, sign: poi.sign, details: [],
     });
   }
+
+  // Beach umbrellas and barriers dress the sand between the coast road and the water.
+  for (let y = 180; y < WORLD.h - 120; y += rng.range(150, 260)) {
+    props.push({ type: 'umbrella', x: rng.range(BEACH_X + 30, WATER_X - 60), y, color: rng.pick(['#ff5d8f', '#ffd166', '#2ec4b6', '#ff7847', '#4cc9f0']) });
+  }
+  for (let k = 0; k < 10; k += 1) props.push({ type: 'barrier', x: rng.range(300, WORLD.w - 900), y: rng.range(200, WORLD.h - 200) });
 
   // Palms down the beach and lamps along every road.
   for (let y = 120; y < WORLD.h - 80; y += rng.range(110, 170)) {
@@ -327,14 +340,16 @@ export function buildCity(rng) {
 function makeBuilding(rng, x, y, w, h, style, kind) {
   const color = rng.pick(style.colors);
   const details = [];
-  const n = rng.int(0, 3);
+  const n = rng.int(2, 5);
   for (let i = 0; i < n; i += 1) {
-    details.push({ dx: rng.range(0.08, 0.8), dy: rng.range(0.08, 0.8), w: rng.range(0.08, 0.2), h: rng.range(0.08, 0.2) });
+    details.push({ dx: rng.range(0.06, 0.82), dy: rng.range(0.06, 0.82), w: rng.range(0.07, 0.18), h: rng.range(0.07, 0.18), kind: rng.weightedPick([['ac', 5], ['vent', 3], ['tank', 1], ['skylight', 2]]) });
   }
+  // Roughly one building in five carries a neon sign at dusk; the sign is seeded data, drawn by render.js.
+  const sign = kind === 'building' && rng.chance(0.22) ? rng.pick(NEON_SIGNS) : null;
   return {
     x, y, w: Math.max(24, w), h: Math.max(24, h),
     ht: rng.range(style.heights[0], style.heights[1]),
-    color, roof: shade(color, 18), kind, details,
+    color, roof: shade(color, 18), roofMat: rng.pick(ROOF_MATS), kind, details, sign,
   };
 }
 

@@ -6,10 +6,15 @@ export function createInput(canvas) {
   const held = new Set();
   const pressedQueue = new Set();
   const mouse = { x: 0, y: 0, down: false, pressed: false, rightDown: false };
+  /** Latched toggles flipped by a single key press (not held): L flips the headlights. */
+  const toggles = { headlights: true };
 
   window.addEventListener('keydown', (event) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab'].includes(event.code)) event.preventDefault();
-    if (!event.repeat) pressedQueue.add(event.code);
+    if (!event.repeat) {
+      pressedQueue.add(event.code);
+      if (event.code === 'KeyL') toggles.headlights = !toggles.headlights;
+    }
     held.add(event.code);
   });
   window.addEventListener('keyup', (event) => {
@@ -41,6 +46,7 @@ export function createInput(canvas) {
 
   return {
     mouse,
+    toggles,
     down(code) {
       return held.has(code);
     },

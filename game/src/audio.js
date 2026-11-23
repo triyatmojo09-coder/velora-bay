@@ -43,6 +43,8 @@ export function createAudio() {
   let sirenOsc = null;
   let sirenGain = null;
   let radioGain = null;
+  let ambGain = null;
+  let ambStarted = false;
   let muted = false;
   let station = 1;
   let seqTimer = null;
@@ -91,7 +93,52 @@ export function createAudio() {
     radioGain.gain.value = 0;
     radioGain.connect(master);
     seqTimer = window.setInterval(scheduleRadio, 90);
+
+    // Evening ambience layer: soft looping surf (filtered noise, slow swell) with sparse
+    // synthesized crickets over it. Very low gain, and it rides the same master/mute as everything.
+    ambGain = ctx.createGain();
+    ambGain.gain.value = 0.0;
+    ambGain.connect(master);
+    const surf = ctx.createBufferSource();
+    surf.buffer = noiseBuffer(2.4);
+    surf.loop = true;
+    const surfFilter = ctx.createBiquadFilter();
+    surfFilter.type = 'lowpass';
+    surfFilter.frequency.value = 480;
+    const surfGain = ctx.createGain();
+    surfGain.gain.value = 0.5;
+    const swell = ctx.createOscillator();
+    swell.type = 'sine';
+    swell.frequency.value = 0.09;
+    const swellDepth = ctx.createGain();
+    swellDepth.gain.value = 0.22;
+    swell.connect(swellDepth);
+    swellDepth.connect(surfGain.gain);
+    surf.connect(surfFilter);
+    surfFilter.connect(surfGain);
+    surfGain.connect(ambGain);
+    surf.start();
+    swell.start();
+    ambStarted = true;
   }
+
+  /** One soft cricket chirp: three short high sine pips. Called sparsely from update(). */
+  function cricket() {
+    if (ctx === null || ambGain === null) return;
+    const t0 = ctx.currentTime + 0.02;
+    for (let i = 0; i < 3; i += 1) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = 4200 + Math.random() * 300;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0, t0 + i * 0.09);
+      g.gain.linearRampToValueAtTime(0.16, t0 + i * 0.09 + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.001, t0 + i * 0.09 + 0.06);
+      osc.connect(g); g.connect(ambGain);
+      osc.start(t0 + i * 0.09); osc.stop(t0 + i * 0.09 + 0.07);
+    }
+  }
+  let cricketT = 0;
 
   function noiseBuffer(dur) {
     const buf = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * dur), ctx.sampleRate);
@@ -242,6 +289,13 @@ export function createAudio() {
     /** Called every frame with the world state: steers engine, sirens and radio audibility. */
     update(state) {
       if (ctx === null) return;
+      // Ambience swells near the shore and fades inland; crickets chirp at random dusk intervals.
+      if (ambGain !== null && ambStarted) {
+        const nearShore = state.player.x > 4000 ? 1 : state.player.x > 3000 ? 0.55 : 0.3;
+        ambGain.gain.setTargetAtTime(0.055 * nearShore, ctx.currentTime, 0.4);
+        cricketT -= 1 / 60;
+        if (cricketT <= 0) { cricket(); cricketT = 1.5 + Math.random() * 4; }
+      }
       const player = state.player;
       const inCar = player.car !== null;
       radioOn = inCar && station !== 0;

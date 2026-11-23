@@ -14,7 +14,7 @@ export function parseShot() {
 }
 
 function stageTitle(state) {
-  state.clock = 18.65 * 60;
+  state.clock = 18.4 * 60; // golden hour: warm wash high, lamps just coming on
   const p = state.player;
   p.x = 4470;
   p.y = 2350;
@@ -24,7 +24,7 @@ function stageTitle(state) {
 }
 
 function stageChase(state) {
-  state.clock = 19.35 * 60;
+  state.clock = 18.9 * 60; // late golden hour: long shadows, headlight cones and lightbars pop
   const p = state.player;
   const car = state.spawnCar('sports', 980, 1100, 0, { kind: 'player' });
   car.vx = 320;
@@ -55,7 +55,7 @@ function stageChase(state) {
 }
 
 function stageMission(state) {
-  state.clock = 18.5 * 60;
+  state.clock = 18.35 * 60; // earliest golden hour: the Gilded Eel's neon reads against warm light
   const p = state.player;
   // Ray stands at the Gilded Eel's door; the boot code "talks" on an early frame, which starts
   // Marla's first job through the director's normal offer path, dialogue panel and all.
@@ -68,13 +68,14 @@ function stageMission(state) {
 }
 
 function stageCity(state) {
-  state.clock = 19.05 * 60;
+  state.clock = 18.8 * 60; // sunset over the bay: teal water, pink sky wash, palms in silhouette
   const p = state.player;
   // Ray stands on the coast road; ambient traffic and pedestrians spawn around him, in frame.
+  // The camera sits west of the shore so palms, neon rooftops, beach and shimmering water share the frame.
   p.x = 4360;
   p.y = 1900;
   p.angle = -Math.PI / 2;
-  state.cameraOverride = { x: 3980, y: 1760, zoom: 0.5 };
+  state.cameraOverride = { x: 4050, y: 1800, zoom: 0.52 };
   const kinds = ['sedan', 'compact', 'taxi', 'sports', 'suv', 'van', 'sedan'];
   for (let i = 0; i < kinds.length; i += 1) {
     const east = i % 2 === 0;

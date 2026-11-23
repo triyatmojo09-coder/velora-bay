@@ -16,6 +16,21 @@ const canvas = document.getElementById('game');
 const status = document.getElementById('status');
 const shot = parseShot();
 
+/** Load the bundled faces before the first frame, so no screenshot or title ever falls back. */
+export const fontsReady = (async () => {
+  try {
+    await Promise.all([
+      document.fonts.load('104px "Anton"'),
+      document.fonts.load('500 16px "Rajdhani"'),
+      document.fonts.load('600 16px "Rajdhani"'),
+      document.fonts.load('700 16px "Rajdhani"'),
+    ]);
+    await document.fonts.ready;
+  } catch {
+    /* fonts are bundled locally; a load failure still leaves the @font-face faces to swap in */
+  }
+})();
+
 const city = buildCity(createRandom(987123));
 let state = null;
 let director = null;
@@ -391,6 +406,8 @@ function frame(now) {
 
 function playFrame(rawDt) {
   const p = state.player;
+  // The L-key headlight latch lives in input; mirror it onto the world every frame.
+  state.headlightsOn = input.toggles.headlights;
   // One-shot keys.
   const ePressed = input.pressed('KeyE') || (shot !== null && shot.name === 'mission' && shotFrame === 6);
   const fPressed = input.pressed('KeyF');
@@ -525,14 +542,14 @@ function drawHowTo() {
     ['', '', 8, 500],
     ['Move / drive — WASD or arrows · Sprint — Shift · Handbrake — Space', '#ffffff', 15, 600],
     ['Enter cars, talk, use — E · Exit car — F · Aim — mouse · Shoot — click (drive-bys too)', '#ffffff', 15, 600],
-    ['Weapons — 1–4, or hold Q / Tab for the wheel · Radio — R · Mute — M · Pause — Esc / P', '#ffffff', 15, 600],
+    ['Weapons — 1–4, or hold Q / Tab for the wheel · Headlights — L · Radio — R · Mute — M · Pause — Esc / P', '#ffffff', 15, 600],
     ['', '', 8, 500],
     ['Stars are heat: break line of sight and it cools. Roadblocks at 3 stars, the helicopter', 'rgba(255,255,255,0.88)', 14.5, 500],
     ['at 4. Buy guns at Harbor Arms, fix and respray at the Auto Works, rest and save at the', 'rgba(255,255,255,0.88)', 14.5, 500],
     ['safehouse. Fares hail you on the street; two street races run from marked start lines.', 'rgba(255,255,255,0.88)', 14.5, 500],
   ];
   lines.forEach((line, i) => {
-    ctx.font = `${line[3]} ${line[2]}px system-ui, sans-serif`;
+    ctx.font = i === 0 ? `${line[2]}px "Anton", "Rajdhani", sans-serif` : `${line[3]} ${line[2]}px "Rajdhani", sans-serif`;
     ctx.fillStyle = line[1];
     ctx.fillText(line[0], x + 30, y + 36 + i * 25.5);
   });
@@ -549,4 +566,5 @@ document.addEventListener('visibilitychange', () => {
 });
 
 announce(shot !== null ? 'Velora Bay screenshot scene.' : 'Velora Bay. A new game awaits.');
-requestAnimationFrame(frame);
+// First frame waits for the bundled fonts (bounded: a hung load must never black-screen the game).
+Promise.race([fontsReady, new Promise((r) => setTimeout(r, 2500))]).then(() => requestAnimationFrame(frame));
