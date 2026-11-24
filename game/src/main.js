@@ -369,8 +369,18 @@ function enterCar(car) {
     }
   }
 }
+// ---------------------------------------------------------------- radio
+let radioStation = -1; // -1 off, 0..2 station index
+function cycleRadio() {
+  if (!currentCar) return radioStation;
+  radioStation = radioStation >= 2 ? -1 : radioStation + 1;
+  const name = audio.setRadio(radioStation);
+  hud.showCamMode(radioStation < 0 ? '📻 RADIO OFF' : (name || 'RADIO'));
+  return radioStation;
+}
 function exitCar(silent = false) {
   if (!currentCar) return;
+  if (radioStation >= 0) { radioStation = -1; audio.stopRadio(); }
   const c = currentCar; currentCar = null;
   playerPos.x = c.pos.x + Math.cos(c.heading) * -2.2 + Math.sin(c.heading) * 0;
   playerPos.x = c.pos.x - Math.cos(c.heading) * 2.4;
@@ -745,6 +755,8 @@ window.__vb = {
   exitInterior() { return exitInterior(); },
   get interior() { return currentInterior; },
   sellLoot() { return sellAllLoot(); },
+  cycleRadio() { return cycleRadio(); },
+  get radioStation() { return radioStation; },
   setOutfit(kind, idx) { return applyShopChoice(kind, idx); },
   get fps() { return fpsNow; },
 };
@@ -943,6 +955,7 @@ function frame() {
       steer: -(input.axis('KeyA', 'KeyD') + input.axis('ArrowLeft', 'ArrowRight')) * charDef().handlingMul,
       handbrake: input.isDown('Space'),
     };
+    if (input.consumePress('KeyR')) cycleRadio();
     const crashed = currentCar.update(inp, dt, colliders);
     if (crashed) { audio.crash(0.7); health -= 2; lastHurt = elapsed; }
     playerPos.x = currentCar.pos.x; playerPos.z = currentCar.pos.z;

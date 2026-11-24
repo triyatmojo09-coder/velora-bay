@@ -4,51 +4,84 @@ import * as THREE from 'three';
 import { CONFIG, PALETTE, toonMat, CHANNELS, inChannel } from './config.js';
 
 function facadeTextures() {
-  // FOUR facade variants: facade (light walls, dark windows) + emissive
-  // (black, only the lit windows) so windows glow at dusk without any image assets.
-  // Large windows (4x8 grid) and varied lit ratios so buildings do not read
-  // as a dense checkerboard.
-  const W = 128, H = 256, cols = 3, rows = 5;
-  const wallBases = ['#ffeeda', '#ffe6cf', '#e2f7e9', '#ffefd4'];
-  const litRatios = [0.10, 0.16, 0.24, 0.32];
-  const unlitCols = ['#6fa8c4', '#5f96bd', '#7fa6c9', '#6fa8c4'];
-  const litCols = ['#ffe9a8', '#ffd98a', '#fff3c4'];
+  // SIXTEEN facade variants (anti-slop detail pass): each variant has its own
+  // seeded layout — different column/row counts, window sizes, lit ratios,
+  // whole dark floors, wide-vs-narrow windows and wall tones — so adjacent
+  // buildings never share a window pattern. Facade (lit+unlit on wall) plus
+  // emissive (black, lit windows only) so windows glow at dusk.
+  const W = 128, H = 256;
+  const wallBases = ['#ffeeda', '#ffe6cf', '#e2f7e9', '#ffefd4', '#fff3e0', '#e8f4ff', '#ffe9ec', '#f4ecd8', '#e6f7f0', '#fdf0d5', '#ffe4c8', '#eef6e6', '#fdeeda', '#e3eefc', '#fff6da', '#f9e8d8'];
+  const unlitCols = ['#6fa8c4', '#5f96bd', '#7fa6c9', '#4f7fa6', '#8fb8d4', '#5a8ab0'];
+  const litCols = ['#ffe9a8', '#ffd98a', '#fff3c4', '#ffca7a'];
   const mk = (c) => { const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace; return t; };
   const variants = [];
-  for (let v = 0; v < 4; v++) {
+  for (let v = 0; v < 16; v++) {
     const face = document.createElement('canvas'); face.width = W; face.height = H;
     const glow = document.createElement('canvas'); glow.width = W; glow.height = H;
     const f = face.getContext('2d'), g = glow.getContext('2d');
     f.fillStyle = wallBases[v]; f.fillRect(0, 0, W, H);
     g.fillStyle = '#000000'; g.fillRect(0, 0, W, H);
-    let s = 7 + v * 7919;
+    let s = 1013 + v * 7919 + v * v * 131;
     const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    const cols = 2 + Math.floor(rnd() * 3); // 2..4 columns
+    const rows = 4 + Math.floor(rnd() * 4); // 4..7 rows
+    const litRatio = 0.08 + rnd() * 0.34;
+    const wide = rnd() < 0.35; // some variants use wide picture windows
+    const darkFloors = new Set();
+    for (let y = 0; y < rows; y++) if (rnd() < 0.16) darkFloors.add(y); // whole floors dark
     const cw = W / cols, ch = H / rows;
     for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
-      if (rnd() < 0.42) continue; // sparse: most of the wall stays soft blank pastel
-      const lit = rnd() < litRatios[v] * 2.2;
-      const px = x * cw + 8, py = y * ch + 9, pw = cw - 16, ph = ch - 18;
+      if (rnd() < 0.30) continue; // blank wall patches break the grid
+      const insetX = wide ? 4 : 7 + rnd() * 4;
+      const insetY = 5 + rnd() * 5;
+      const px = x * cw + insetX, py = y * ch + insetY;
+      const pw = cw - insetX * 2, ph = ch - insetY * 2;
+      const lit = !darkFloors.has(y) && rnd() < litRatio * 2.4;
       if (lit) {
         const lc = litCols[Math.floor(rnd() * litCols.length)];
-        f.fillStyle = lc;
-        f.fillRect(px, py, pw, ph);
-        // slight per-window brightness variation on the glow map
-        const bright = 0.8 + rnd() * 0.35;
+        f.fillStyle = lc; f.fillRect(px, py, pw, ph);
+        const bright = 0.7 + rnd() * 0.5;
         const num = parseInt(lc.slice(1), 16);
         const r = Math.min(255, Math.round(((num >> 16) & 255) * bright));
         const gg = Math.min(255, Math.round(((num >> 8) & 255) * bright));
         const b = Math.min(255, Math.round((num & 255) * bright));
-        g.fillStyle = `rgb(${r},${gg},${b})`;
-        g.fillRect(px, py, pw, ph);
+        g.fillStyle = `rgb(${r},${gg},${b})`; g.fillRect(px, py, pw, ph);
+        if (rnd() < 0.3) { f.fillStyle = 'rgba(120,80,40,0.35)'; f.fillRect(px + pw / 2 - 1, py, 2, ph); } // mullion hint
       } else {
         f.fillStyle = unlitCols[Math.floor(rnd() * unlitCols.length)];
         f.fillRect(px, py, pw, ph);
+        if (rnd() < 0.25) { f.fillStyle = 'rgba(255,255,255,0.35)'; f.fillRect(px, py, pw, 3); } // sill glint
       }
     }
+    // subtle horizontal banding so tall repeats do not look tiled
+    f.fillStyle = 'rgba(120,80,60,0.10)';
+    for (let y = 1; y < rows; y++) f.fillRect(0, y * ch - 1, W, 2);
     variants.push({ face: mk(face), glow: mk(glow) });
   }
   return variants;
 }
+
+// Canvas sign texture with neon-glow lettering for shopfronts / billboards.
+function signTexture(text, color, bg = '#1d1430', fontPx = 52) {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+  const x = c.getContext('2d');
+  x.fillStyle = bg; x.fillRect(0, 0, 512, 128);
+  x.strokeStyle = color; x.lineWidth = 5; x.strokeRect(8, 8, 496, 112);
+  x.font = `900 ${fontPx}px Cinzel, serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.shadowColor = color; x.shadowBlur = 20; x.fillStyle = color;
+  x.fillText(text, 256, 68); x.fillText(text, 256, 68);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const SHOPS_SIGNS = [
+  ['KAPAL KARAM CAFE', '#2ec4b6'], ['NOODLE LILIN', '#ffc94d'], ['BUNGA BAY FLORIST', '#ff5d8f'],
+  ['RAMBUT & RUM', '#7ec8e8'], ['DISKO BAKSO', '#ff8a3c'], ['LAUNDRY LAGUNA', '#b388eb'],
+  ['TIKET TERBANG', '#7dff6a'], ['KOPI KARANG', '#ffd98a'], ['SEWA SEPEDA BAY', '#39c2ff'],
+  ['GELATO GELOMBANG', '#ff9ebb'], ['BUKU BEKAS BARA', '#ffe9a8'], ['APOTEK OMBAK', '#5fe0d0'],
+];
+const BILLBOARDS = [
+  ['VELORA COLA — RASA OMBAK!', '#ff5d8f'], ['KASINO AZUL — MALAM INI', '#39c2ff'], ['BAY FM 98.7 — MUSIK PANTAI', '#ffc94d'],
+];
 
 function neonTexture(text, color) {
   const c = document.createElement('canvas'); c.width = 512; c.height = 96;
@@ -187,6 +220,25 @@ export function buildCity(scene, rng) {
         b.castShadow = true; b.receiveShadow = true;
         group.add(b);
         colliders.push({ minX: bx + lx - w / 2, maxX: bx + lx + w / 2, minZ: bz + lz - d / 2, maxZ: bz + lz + d / 2 });
+        // varied parapet: low / tall / stepped rim around the roof edge
+        {
+          const pStyle = rng();
+          const pH = pStyle < 0.4 ? 0.35 : pStyle < 0.75 ? 0.7 : 1.1;
+          const rimMat2 = new THREE.MeshLambertMaterial({ color: tint });
+          const rimT = 0.35;
+          for (const [rw, rd, ox, oz] of [[w + 0.3, rimT, 0, -d / 2], [w + 0.3, rimT, 0, d / 2], [rimT, d + 0.3, -w / 2, 0], [rimT, d + 0.3, w / 2, 0]]) {
+            const rim = new THREE.Mesh(boxGeo, rimMat2);
+            rim.scale.set(rw, pH, rd); rim.position.set(bx + lx + ox, h + 0.15 + pH / 2, bz + lz + oz);
+            group.add(rim);
+          }
+          if (pStyle >= 0.75) { // stepped corner caps
+            for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+              const cap = new THREE.Mesh(boxGeo, rimMat2);
+              cap.scale.set(1.1, 0.55, 1.1); cap.position.set(bx + lx + sx * (w / 2 - 0.3), h + 0.15 + pH + 0.27, bz + lz + sz * (d / 2 - 0.3));
+              group.add(cap);
+            }
+          }
+        }
         // varied silhouettes: setback tier, sloped prism roof, or rooftop box
         const sil = rng();
         if (sil < 0.38) {
@@ -202,6 +254,49 @@ export function buildCity(scene, rng) {
           const ac = new THREE.Mesh(boxGeo, roofMat);
           ac.scale.set(3, 1.2, 3); ac.position.set(bx + lx + (rng() - 0.5) * 6, h + 0.7, bz + lz + (rng() - 0.5) * 6);
           group.add(ac);
+        }
+        // rooftop props: AC boxes, vents, water towers (hand-dressed skyline)
+        {
+          const propN = 1 + Math.floor(rng() * 3);
+          for (let pi = 0; pi < propN; pi++) {
+            const px = bx + lx + (rng() - 0.5) * (w - 5), pz = bz + lz + (rng() - 0.5) * (d - 5);
+            const kind = rng();
+            if (kind < 0.42) {
+              const acb = new THREE.Mesh(boxGeo, roofMat);
+              acb.scale.set(1.6 + rng() * 1.6, 0.8 + rng() * 0.7, 1.4 + rng()); acb.position.set(px, h + 0.7, pz);
+              acb.rotation.y = rng() * 0.6; group.add(acb);
+            } else if (kind < 0.72) {
+              const vent = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.42, 1.1, 8), roofMat);
+              vent.position.set(px, h + 0.7, pz); group.add(vent);
+              const capV = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.22, 8), roofMat);
+              capV.position.set(px, h + 1.3, pz); group.add(capV);
+            } else if (h > 14) {
+              const tank = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.05, 2.1, 10), new THREE.MeshLambertMaterial({ color: 0x9a6a48 }));
+              tank.position.set(px, h + 1.9, pz); group.add(tank);
+              const cone = new THREE.Mesh(new THREE.ConeGeometry(1.25, 0.8, 10), roofMat);
+              cone.position.set(px, h + 3.3, pz); group.add(cone);
+              for (const [lx2, lz2] of [[-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]]) {
+                const leg = new THREE.Mesh(boxGeo, roofMat);
+                leg.scale.set(0.16, 0.9, 0.16); leg.position.set(px + lx2, h + 0.45, pz + lz2); group.add(leg);
+              }
+            }
+          }
+        }
+        // ground-floor storefront on the south face: glass front, striped awning, neon shop sign
+        if (h > 7 && rng() < 0.62) {
+          const faceZ = bz + lz - d / 2;
+          const glassF = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0x2a4a5e, emissive: 0xffd98a, emissiveIntensity: 0.28 }));
+          glassF.scale.set(Math.min(w * 0.78, 10), 2.5, 0.18); glassF.position.set(bx + lx, 1.45, faceZ - 0.12);
+          group.add(glassF);
+          const awnCols = [0xff5d8f, 0x2ec4b6, 0xffc94d, 0xff8a3c, 0x7ec8e8];
+          const awn = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: awnCols[Math.floor(rng() * awnCols.length)] }));
+          awn.scale.set(Math.min(w * 0.82, 10.6), 0.14, 1.7); awn.position.set(bx + lx, 2.95, faceZ - 0.85); awn.rotation.x = -0.32;
+          group.add(awn);
+          const [shopName, shopCol] = SHOPS_SIGNS[Math.floor(rng() * SHOPS_SIGNS.length)];
+          const sign = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(w * 0.8, 10.4), 2.0),
+            new THREE.MeshBasicMaterial({ map: signTexture(shopName, shopCol) }));
+          sign.position.set(bx + lx, 4.15, faceZ - 0.16); sign.rotation.y = Math.PI;
+          group.add(sign); neonSigns.push(sign);
         }
         // a handful of neon signs on street-facing walls
         if (neonIdx < NEON.length && h > 16 && rng() < 0.4) {
@@ -360,6 +455,25 @@ export function buildCity(scene, rng) {
       hotel.scale.set(hw, hh, hd); hotel.position.set(145, hh / 2 + 0.15, bz);
       hotel.castShadow = true; hotel.receiveShadow = true; group.add(hotel);
       colliders.push({ minX: 145 - hw / 2, maxX: 145 + hw / 2, minZ: bz - hd / 2, maxZ: bz + hd / 2 });
+      // balconies on the ocean (east) face: slab + railing, staggered per floor
+      {
+        const balMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+        const railMat2 = new THREE.MeshLambertMaterial({ color: 0x5a7a8c });
+        const floors = Math.floor(hh / 3.1);
+        let bs = 31 + bz * 7;
+        const brnd = () => { bs = (bs * 16807) % 2147483647; return bs / 2147483647; };
+        for (let fl = 1; fl < floors; fl++) {
+          for (const off of [-hd * 0.28, 0, hd * 0.28]) {
+            if (brnd() < 0.3) continue; // staggered gaps, not a uniform grid
+            const slab = new THREE.Mesh(boxGeo, balMat);
+            slab.scale.set(1.3, 0.16, 3.4); slab.position.set(145 + hw / 2 + 0.65, fl * 3.1 + 0.4, bz + off);
+            group.add(slab);
+            const rail = new THREE.Mesh(boxGeo, railMat2);
+            rail.scale.set(0.08, 0.55, 3.4); rail.position.set(145 + hw / 2 + 1.28, fl * 3.1 + 0.75, bz + off);
+            group.add(rail);
+          }
+        }
+      }
     }
   }
 
@@ -411,11 +525,124 @@ export function buildCity(scene, rng) {
     }
   }
 
+  // --- large original billboards on tall downtown rooftops ------------------
+  {
+    const spots = [[-27, -27, 34], [27, 27, 40], [-81, 27, 30]];
+    BILLBOARDS.forEach(([label, color], i) => {
+      const [bx3, bz3, by] = spots[i];
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 7, 8), poleMat);
+      pole.position.set(bx3, by, bz3); group.add(pole);
+      const board = new THREE.Mesh(new THREE.PlaneGeometry(17, 4.4),
+        new THREE.MeshBasicMaterial({ map: signTexture(label, color, '#160f26', 40), side: THREE.DoubleSide }));
+      board.position.set(bx3, by + 5.4, bz3); board.rotation.y = i * 0.7 + 0.4;
+      group.add(board); neonSigns.push(board);
+      const back = new THREE.Mesh(boxGeo, roofMat);
+      back.scale.set(17.2, 4.6, 0.25); back.position.copy(board.position); back.rotation.y = board.rotation.y;
+      back.translateZ(-0.16); group.add(back);
+    });
+  }
+
+  // --- street dressing: benches, planters, hydrants, bins, bus stop, papers --
+  const boats = [];
+  {
+    const benchMat = new THREE.MeshLambertMaterial({ color: 0x7a5c3e });
+    const metalMat = new THREE.MeshLambertMaterial({ color: 0x4a5a6a });
+    const shrubMat = toonMat(0x3f9e57);
+    const shrubGeo = new THREE.SphereGeometry(0.55, 8, 6);
+    const planterGeo = new THREE.BoxGeometry(1.5, 0.55, 0.7);
+    const benchSeatGeo = new THREE.BoxGeometry(2.1, 0.12, 0.55);
+    const benchLegGeo = new THREE.BoxGeometry(0.12, 0.45, 0.5);
+    // deterministic scatter along sidewalk edges (street centres +/- 9.2)
+    let ps = 4242;
+    const prnd = () => { ps = (ps * 16807) % 2147483647; return ps / 2147483647; };
+    const spots = [];
+    for (const c of CONFIG.STREET_CENTERS) {
+      for (let d = -150; d <= 150; d += 27) {
+        if (CONFIG.STREET_CENTERS.some((s) => Math.abs(d + 6 - s) < 11)) continue;
+        spots.push({ x: c + (prnd() < 0.5 ? -9.2 : 9.2), z: d + prnd() * 8, rot: Math.PI / 2 });
+        spots.push({ x: d + prnd() * 8, z: c + (prnd() < 0.5 ? -9.2 : 9.2), rot: 0 });
+      }
+    }
+    spots.forEach((sp, i) => {
+      if (inChannel(sp.x, sp.z) || sp.x > 140) return;
+      const kind = i % 5;
+      const g2 = new THREE.Group(); g2.position.set(sp.x, 0.15, sp.z); g2.rotation.y = sp.rot;
+      if (kind === 0) { // bench
+        const seat = new THREE.Mesh(benchSeatGeo, benchMat); seat.position.y = 0.48; g2.add(seat);
+        const back2 = new THREE.Mesh(benchSeatGeo, benchMat); back2.position.set(0, 0.85, -0.24); back2.rotation.x = -0.25; g2.add(back2);
+        for (const sx of [-0.85, 0.85]) { const leg = new THREE.Mesh(benchLegGeo, metalMat); leg.position.set(sx, 0.22, 0); g2.add(leg); }
+      } else if (kind === 1) { // planter with shrub
+        const pl = new THREE.Mesh(planterGeo, new THREE.MeshLambertMaterial({ color: 0xc96f4a })); pl.position.y = 0.28; g2.add(pl);
+        const sh = new THREE.Mesh(shrubGeo, shrubMat); sh.position.y = 0.85; sh.scale.set(1.2, 0.8, 0.7); g2.add(sh);
+      } else if (kind === 2) { // hydrant
+        const hy = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.6, 8), new THREE.MeshLambertMaterial({ color: 0xe84a3c }));
+        hy.position.y = 0.3; g2.add(hy);
+        const capH = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), metalMat); capH.position.y = 0.62; g2.add(capH);
+      } else if (kind === 3) { // trash bin
+        const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.3, 0.85, 10), new THREE.MeshLambertMaterial({ color: 0x3a7d5d }));
+        bin.position.y = 0.42; g2.add(bin);
+      } else { // newspaper box
+        const nb = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.8, 0.45), new THREE.MeshLambertMaterial({ color: [0x39c2ff, 0xffc94d, 0xff5d8f][i % 3] }));
+        nb.position.y = 0.4; g2.add(nb);
+        const win = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.04), new THREE.MeshBasicMaterial({ color: 0xfff6da }));
+        win.position.set(0, 0.52, 0.24); g2.add(win);
+      }
+      group.add(g2);
+    });
+    // bus-stop shelter on the main east-west avenue
+    {
+      const sh2 = new THREE.Group(); sh2.position.set(27, 0.15, -9.2);
+      const roofS = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.14, 1.7), metalMat); roofS.position.y = 2.5; sh2.add(roofS);
+      for (const sx of [-2.4, 2.4]) { const post = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 2.5, 6), metalMat); post.position.set(sx, 1.25, -0.6); sh2.add(post); }
+      const glassS = new THREE.Mesh(new THREE.BoxGeometry(5.0, 1.7, 0.06), new THREE.MeshLambertMaterial({ color: 0x9fd8e8, transparent: true, opacity: 0.45 }));
+      glassS.position.set(0, 1.15, -0.62); sh2.add(glassS);
+      const bench2 = new THREE.Mesh(benchSeatGeo, benchMat); bench2.position.set(0, 0.55, -0.3); bench2.scale.x = 2.1; sh2.add(bench2);
+      const signB = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 0.8), new THREE.MeshBasicMaterial({ map: signTexture('BUS — BAY LINE', '#39c2ff', '#1d1430', 44) }));
+      signB.position.set(0, 2.0, 0.86); sh2.add(signB);
+      group.add(sh2);
+    }
+    // marina boats bobbing in the south inlet + off the pier
+    const hullCols = [0xffffff, 0xff5d8f, 0x39c2ff, 0xffc94d, 0x2ec4b6];
+    const boatSpots = [[70, 81], [95, 80], [125, 82], [150, 79], [205, 40], [212, 66]];
+    boatSpots.forEach(([bx4, bz4], i) => {
+      const boat = new THREE.Group();
+      const hull = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.8, 1.9), new THREE.MeshLambertMaterial({ color: hullCols[i % hullCols.length] }));
+      hull.position.y = 0.35; boat.add(hull);
+      const bow = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.95, 1.6, 4), hull.material);
+      bow.rotation.z = Math.PI / 2; bow.rotation.y = Math.PI / 4; bow.scale.set(1, 1, 0.55); bow.position.set(3.0, 0.35, 0); boat.add(bow);
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.8, 1.4), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+      cab.position.set(-0.4, 1.1, 0); boat.add(cab);
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.4, 5), metalMat);
+      mast.position.set(0.9, 2.2, 0); boat.add(mast);
+      boat.position.set(bx4, 0.1, bz4); boat.rotation.y = i * 0.8;
+      boat.userData = { baseY: 0.1, ph: i * 1.3, baseRot: boat.rotation.y };
+      group.add(boat); boats.push(boat);
+    });
+    // beach umbrellas + loungers on the sand strip
+    const umbCols = [0xff5d8f, 0xffc94d, 0x2ec4b6, 0xff8a3c, 0xb388eb, 0x39c2ff];
+    for (let i = 0; i < 14; i++) {
+      const ux = 158 + prnd() * 16, uz = -150 + i * 21 + prnd() * 8;
+      if (inChannel(ux, uz)) continue;
+      const um = new THREE.Group(); um.position.set(ux, 0, uz);
+      const poleU = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.1, 5), metalMat); poleU.position.y = 1.05; um.add(poleU);
+      const can = new THREE.Mesh(new THREE.ConeGeometry(1.5, 0.55, 8), new THREE.MeshLambertMaterial({ color: umbCols[i % umbCols.length] }));
+      can.position.y = 2.15; um.add(can);
+      const lou = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.14, 1.8), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+      lou.position.set(1.2, 0.18, 0.3); lou.rotation.x = -0.18; um.add(lou);
+      group.add(um);
+    }
+  }
+
   scene.add(group);
 
   let t = 0;
   function update(dt) {
     t += dt;
+    for (const b of boats) {
+      b.position.y = b.userData.baseY + Math.sin(t * 1.1 + b.userData.ph) * 0.09;
+      b.rotation.z = Math.sin(t * 0.9 + b.userData.ph) * 0.045;
+      b.rotation.x = Math.cos(t * 0.7 + b.userData.ph) * 0.03;
+    }
     water.position.y = 0.12 + Math.sin(t * 0.7) * 0.05;
     waterMat.opacity = 0.9 + Math.sin(t * 0.45) * 0.04;
     waterMat.specular.setHSL(0.09, 0.7, 0.55 + Math.sin(t * 1.3) * 0.18); // animated shimmer

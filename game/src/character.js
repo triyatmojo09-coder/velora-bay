@@ -5,15 +5,25 @@ import { toonMat } from './config.js';
 const box = (w, h, d, mat) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
 const sph = (r, mat, w = 12, h = 9) => new THREE.Mesh(new THREE.SphereGeometry(r, w, h), mat);
 const damp = (a, b, l, dt) => a + (b - a) * (1 - Math.exp(-l * dt));
-export function buildHuman({ shirt = 0x2ec4b6, sleeves = 0xff5d8f, pants = 0x2b2b3a, skin = 0xf2c49b, cap = 0x3a2e4f, hair = null, capOn = false, beard = false, chain = false, hairLen = 0.6, buildW = 1 } = {}) {
+export function buildHuman({ shirt = 0x2ec4b6, sleeves = 0xff5d8f, pants = 0x2b2b3a, skin = 0xf2c49b, cap = 0x3a2e4f, hair = null, capOn = false, beard = false, chain = false, hairLen = 0.6, buildW = 1, shoeCol = null } = {}) {
   const g = new THREE.Group();
   const mShirt = toonMat(shirt), mSleeve = toonMat(sleeves), mPants = toonMat(pants);
-  const mSkin = toonMat(skin), mHair = toonMat(hair ?? cap), mShoe = toonMat(0xffffff), mDark = toonMat(0x2b2135);
+  // contrasting shoes: explicit colour, else a tasteful complement of the shirt
+  const mSkin = toonMat(skin), mHair = toonMat(hair ?? cap), mShoe = toonMat(shoeCol ?? (shirt === 0xffffff || shirt === 0xf2f2f2 ? 0xe84a3c : 0xffffff)), mDark = toonMat(0x2b2135);
+  const mBelt = toonMat(0x4a3220), mGold = toonMat(0xffc94d), mTrim = toonMat(sleeves === shirt ? 0xffffff : sleeves);
   const hips = new THREE.Group(); hips.position.y = 1.02; g.add(hips);
   const pelvis = box(0.36, 0.22, 0.24, mPants); pelvis.scale.x = buildW; hips.add(pelvis);
+  // belt with gold buckle around the waist
+  const belt = box(0.38, 0.07, 0.26, mBelt); belt.scale.x = buildW; belt.position.y = 0.10; hips.add(belt);
+  const buckle = box(0.09, 0.05, 0.02, mGold); buckle.position.set(0, 0.10, 0.14); hips.add(buckle);
   const torso = new THREE.Group(); torso.position.y = 0.10; hips.add(torso);
   const chest = box(0.40, 0.52, 0.24, mShirt); chest.position.y = 0.28; chest.scale.x = buildW; torso.add(chest);
+  // shirt placket stripe + pocket hint so the torso is not a flat slab
+  const placket = box(0.05, 0.44, 0.015, mTrim); placket.position.set(0, 0.28, 0.125); torso.add(placket);
+  const pocket = box(0.10, 0.09, 0.015, mTrim); pocket.position.set(-0.11, 0.38, 0.125); torso.add(pocket);
   if (chain) { const ch = box(0.17, 0.045, 0.02, toonMat(0xffc94d)); ch.position.set(0, 0.44, 0.135); ch.rotation.x = 0.25; torso.add(ch); }
+  // necklace hint for everyone (thin chain + pendant) — subtle, under the scarf line
+  { const nk = box(0.13, 0.03, 0.015, mGold); nk.position.set(0, 0.50, 0.125); nk.rotation.x = 0.3; torso.add(nk); }
   torso.userData.buildW = buildW;
   const flaps = [];
   for (const s of [-1, 1]) { const pivot = new THREE.Group(); pivot.position.set(s * 0.11, 0.06, -0.13); torso.add(pivot); const flap = box(0.18, 0.30, 0.03, mSleeve); flap.position.y = -0.15; pivot.add(flap); flaps.push(pivot); }
@@ -46,9 +56,15 @@ export function buildHuman({ shirt = 0x2ec4b6, sleeves = 0xff5d8f, pants = 0x2b2
   function arm(side) {
     const sh = new THREE.Group(); sh.position.set(side * 0.26 * buildW, 0.50, 0); torso.add(sh);
     const upper = box(0.11, 0.32, 0.11, mSleeve); upper.position.y = -0.16; sh.add(upper);
+    // sleeve trim band at the cuff edge
+    const trim = box(0.12, 0.06, 0.12, mTrim); trim.position.y = -0.30; sh.add(trim);
     const el = new THREE.Group(); el.position.y = -0.32; sh.add(el);
     const fore = box(0.095, 0.30, 0.095, mSkin); fore.position.y = -0.15; el.add(fore);
     const hand = sph(0.055, mSkin, 8, 6); hand.position.y = -0.33; el.add(hand);
+    if (side > 0) { // watch hint on the right wrist
+      const watch = box(0.105, 0.05, 0.105, mDark); watch.position.y = -0.27; el.add(watch);
+      const faceW = box(0.05, 0.02, 0.05, mGold); faceW.position.y = -0.245; el.add(faceW);
+    }
     return { sh, el };
   }
   function leg(side) {
@@ -57,6 +73,8 @@ export function buildHuman({ shirt = 0x2ec4b6, sleeves = 0xff5d8f, pants = 0x2b2
     const knee = new THREE.Group(); knee.position.y = -0.46; hip.add(knee);
     const shin = box(0.11, 0.40, 0.12, mSkin); shin.position.y = -0.20; knee.add(shin);
     const shoe = box(0.13, 0.08, 0.27, mShoe); shoe.position.set(0, -0.42, 0.05); knee.add(shoe);
+    // white sole stripe under the contrasting shoe
+    const sole = box(0.135, 0.03, 0.28, toonMat(0xf2f2f2)); sole.position.set(0, -0.465, 0.05); knee.add(sole);
     return { hip, knee };
   }
   const armL = arm(-1), armR = arm(1); const legL = leg(-1), legR = leg(1);
